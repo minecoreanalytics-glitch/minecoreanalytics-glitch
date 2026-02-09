@@ -22,6 +22,15 @@ interface Account {
   churn_probability: number;
   product_count?: number;
   last_activity?: string;
+  health_explanation?: string;
+  health_factors?: {
+    payment_method_score?: number;
+    failed_payments_10m?: number;
+    service_count?: number;
+    plan_tier?: string;
+    account_age_months?: number;
+    timing_points?: number;
+  };
 }
 
 const PortfolioDetail: React.FC = () => {
@@ -206,6 +215,75 @@ const PortfolioDetail: React.FC = () => {
         )}
       </div>
 
+      {/* Portfolio 360 Briefing (Agent view) */}
+      {role === 'agent' && (
+        <div className="mb-10 bg-morpheus-800 border border-morpheus-700 rounded-2xl p-6">
+          <div className="text-sm font-semibold text-white mb-2">Portfolio 360 Briefing</div>
+          <div className="text-sm text-gray-300 leading-relaxed">
+            {(() => {
+              const total = accounts.length;
+              const totalMRRLocal = totalMRR;
+              const avg = Math.round(avgHealth);
+              const top5 = [...accounts].sort((a,b)=> (b.mrr||0)-(a.mrr||0)).slice(0,5);
+              const top5Mrr = top5.reduce((s,a)=> s+(a.mrr||0), 0);
+              const top5Pct = totalMRRLocal > 0 ? Math.round((top5Mrr/totalMRRLocal)*100) : 0;
+              const atRisk = accounts.filter(a => (a.health_score||0) < 70);
+              const atRiskMrr = atRisk.reduce((s,a)=> s+(a.mrr||0), 0);
+              const stale = accounts.filter(a => {
+                if (!a.last_activity) return false;
+                const days = (Date.now() - new Date(a.last_activity).getTime())/86400000;
+                return days >= 30;
+              });
+              const failed = accounts.filter(a => (a.health_factors?.failed_payments_10m || 0) > 0);
+
+              const priorities = [...accounts]
+                .map(a => {
+                  const days = a.last_activity ? Math.round((Date.now() - new Date(a.last_activity).getTime())/86400000) : null;
+                  const fail = a.health_factors?.failed_payments_10m || 0;
+                  const score = (a.health_score||0);
+                  // simple priority heuristic
+                  const p = (100-score) + (fail*10) + (days ? Math.min(40, days/2) : 0);
+                  return { a, p, days, fail };
+                })
+                .sort((x,y)=> y.p - x.p)
+                .slice(0,3);
+
+              return (
+                <div className="space-y-2">
+                  <div>
+                    You’re managing <span className="font-mono text-gray-100">{total}</span> clients worth{' '}
+                    <span className="font-mono text-emerald-300">${Math.round(totalMRRLocal).toLocaleString()}</span> MRR. Average health is{' '}
+                    <span className="font-mono text-gray-100">{avg}%</span>.
+                  </div>
+                  <div>
+                    Revenue concentration: top 5 accounts represent <span className="font-mono text-gray-100">{top5Pct}%</span> of MRR.
+                    At-risk revenue: <span className="font-mono text-gray-100">{atRisk.length}</span> accounts /{' '}
+                    <span className="font-mono text-gray-100">${Math.round(atRiskMrr).toLocaleString()}</span> MRR.
+                  </div>
+                  <div>
+                    Signals: <span className="font-mono text-gray-100">{failed.length}</span> accounts with failed payments (10m),{' '}
+                    <span className="font-mono text-gray-100">{stale.length}</span> accounts inactive 30+ days.
+                  </div>
+                  <div className="pt-2">
+                    <div className="text-xs text-gray-400 uppercase tracking-wider mb-1">Today’s priorities</div>
+                    <ol className="list-decimal list-inside text-sm text-gray-200 space-y-1">
+                      {priorities.map(({a, days, fail}) => (
+                        <li key={a.customer_id}>
+                          <span className="font-semibold">{a.name}</span> (${Math.round(a.mrr||0).toLocaleString()} MRR)
+                          {fail ? ` • ${fail} failed payments` : ''}
+                          {days !== null ? ` • last activity ${days}d` : ''}
+                          {a.health_explanation ? ` • ${a.health_explanation}` : ''}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         <div className="bg-morpheus-800 border border-morpheus-700 rounded-2xl p-6">
@@ -267,7 +345,10 @@ const PortfolioDetail: React.FC = () => {
               >
                 <td className="px-6 py-4">
                   <div className="font-semibold text-white">{account.name}</div>
-                  <div className="text-xs text-gray-500">ID: {account.customer_id} • {account.industry}</div>
+                  <div className="text-xs text-gray-500">
+                    ID: {account.customer_id} • {account.industry}
+                    {account.health_explanation ? ` • ${account.health_explanation}` : ''}
+                  </div>
                 </td>
                 <td className="px-6 py-4 font-mono text-emerald-400">${account.mrr.toLocaleString()}</td>
                 <td className="px-6 py-4">

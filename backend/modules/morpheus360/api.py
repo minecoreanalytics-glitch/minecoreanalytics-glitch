@@ -475,6 +475,27 @@ async def get_agent_portfolio(limit: int = 1000):
             failure_boost = min(30, failure_penalty / 2)  # Failures increase churn risk
             churn_probability = min(100, base_churn + failure_boost)
             
+            # Human-readable explanation (deterministic)
+            reasons = []
+            if failure_penalty and failure_penalty > 0:
+                reasons.append(f"{int(failure_penalty/20)} failed payments (10m)")
+            if payment_method_score >= 45:
+                reasons.append("paid by credit card")
+            elif payment_method_score <= 15:
+                reasons.append("high-risk payment method")
+            if service_count >= 20:
+                reasons.append("high product adoption")
+            elif service_count <= 3:
+                reasons.append("low product adoption")
+            if timing_points <= 4:
+                reasons.append("late payment timing")
+            if account_age_months >= 24:
+                reasons.append("long tenure")
+            elif account_age_months <= 3:
+                reasons.append("new account")
+
+            explanation = "; ".join(reasons) if reasons else "stable signals"
+
             portfolio.append({
                 "customer_id": str(row['customer_id']),
                 "name": row['name'],
@@ -485,7 +506,16 @@ async def get_agent_portfolio(limit: int = 1000):
                 "churn_probability": float(churn_probability),
                 "industry": row['industry'] or "Unknown",
                 "product_count": int(service_count),
-                "last_activity": str(row['last_transaction_date']) if row['last_transaction_date'] else None
+                "last_activity": str(row['last_transaction_date']) if row['last_transaction_date'] else None,
+                "health_explanation": explanation,
+                "health_factors": {
+                    "payment_method_score": float(payment_method_score),
+                    "failed_payments_10m": int(failure_penalty / 20) if failure_penalty else 0,
+                    "service_count": int(service_count),
+                    "plan_tier": str(plan_tier),
+                    "account_age_months": int(account_age_months),
+                    "timing_points": float(timing_points),
+                }
             })
         
         return portfolio
