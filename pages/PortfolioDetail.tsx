@@ -23,7 +23,9 @@ interface Account {
   product_count?: number;
   last_activity?: string;
   health_explanation?: string;
-  health_factors?: {
+  activity_level?: 'High' | 'Mid' | 'Low' | 'Unknown';
+  days_since_last_activity?: number | null;
+  health_factors?: { 
     payment_method_score?: number;
     failed_payments_10m?: number;
     service_count?: number;
@@ -347,6 +349,7 @@ const PortfolioDetail: React.FC = () => {
                   <div className="font-semibold text-white">{account.name}</div>
                   <div className="text-xs text-gray-500">
                     ID: {account.customer_id} • {account.industry}
+                    {account.activity_level ? ` • Activity: ${account.activity_level}${typeof account.days_since_last_activity === 'number' ? ` (${account.days_since_last_activity}d)` : ''}` : ''}
                     {account.health_explanation ? ` • ${account.health_explanation}` : ''}
                   </div>
                 </td>

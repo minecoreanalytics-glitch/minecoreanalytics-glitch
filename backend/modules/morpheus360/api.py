@@ -496,10 +496,29 @@ async def get_agent_portfolio(limit: int = 1000):
 
             explanation = "; ".join(reasons) if reasons else "stable signals"
 
+            # Activity recency
+            try:
+                from datetime import date
+                last_dt = row['last_transaction_date']
+                days_since_last = (date.today() - last_dt).days if last_dt else None
+            except Exception:
+                days_since_last = None
+
+            if days_since_last is None:
+                activity_level = "Unknown"
+            elif days_since_last <= 30:
+                activity_level = "High"
+            elif days_since_last <= 60:
+                activity_level = "Mid"
+            else:
+                activity_level = "Low"
+
             portfolio.append({
                 "customer_id": str(row['customer_id']),
                 "name": row['name'],
                 "status": "Active",
+                "activity_level": activity_level,
+                "days_since_last_activity": days_since_last,
                 "mrr": float(total_mrr),
                 "lifetime_value": float(row['lifetime_payments'] or 0),
                 "health_score": float(health_score),
