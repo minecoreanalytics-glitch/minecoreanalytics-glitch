@@ -128,6 +128,23 @@ const PortfolioDetail: React.FC = () => {
     ? accounts.reduce((sum, a) => sum + (a.health_score || 0), 0) / accounts.length 
     : 0;
 
+  const filteredAvailableAccounts = availableAccounts
+    .filter(a => {
+      const q = searchQuery.trim().toLowerCase();
+      const matchesQuery = !q || a.name.toLowerCase().includes(q) || a.customer_id.includes(searchQuery.trim());
+
+      const minMrr = minMRR.trim() ? Number(minMRR) : null;
+      const minProd = minProducts.trim() ? Number(minProducts) : null;
+      const since = activeSince ? new Date(activeSince) : null;
+
+      const matchesMRR = minMrr === null || (a.mrr || 0) >= minMrr;
+      const matchesProducts = minProd === null || (a.product_count || 0) >= minProd;
+      const matchesDate = !since || !a.last_activity || (new Date(a.last_activity) >= since);
+
+      return matchesQuery && matchesMRR && matchesProducts && matchesDate;
+    })
+    .sort((a, b) => (b.mrr || 0) - (a.mrr || 0));
+
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <button 
@@ -344,24 +361,17 @@ const PortfolioDetail: React.FC = () => {
             </div>
 
             <div className="flex-1 overflow-y-auto p-2">
+              <div className="px-2 py-2 text-xs text-gray-400">
+                Showing <span className="text-gray-200 font-mono">{filteredAvailableAccounts.length}</span> of{' '}
+                <span className="text-gray-200 font-mono">{availableAccounts.length}</span> clients
+              </div>
               <div className="grid grid-cols-1 gap-2">
-                {availableAccounts
-                  .filter(a => {
-                    const q = searchQuery.trim().toLowerCase();
-                    const matchesQuery = !q || a.name.toLowerCase().includes(q) || a.customer_id.includes(searchQuery.trim());
-
-                    const minMrr = minMRR.trim() ? Number(minMRR) : null;
-                    const minProd = minProducts.trim() ? Number(minProducts) : null;
-                    const since = activeSince ? new Date(activeSince) : null;
-
-                    const matchesMRR = minMrr === null || (a.mrr || 0) >= minMrr;
-                    const matchesProducts = minProd === null || (a.product_count || 0) >= minProd;
-
-                    const matchesDate = !since || !a.last_activity || (new Date(a.last_activity) >= since);
-
-                    return matchesQuery && matchesMRR && matchesProducts && matchesDate;
-                  })
-                  .map(a => (
+                {filteredAvailableAccounts.length === 0 && (
+                  <div className="p-8 text-center text-gray-500">
+                    No clients match your filters. Try lowering Min MRR/Products or clearing the date filter.
+                  </div>
+                )}
+                {filteredAvailableAccounts.map(a => (
                     <div key={a.customer_id} className="flex items-center justify-between p-4 hover:bg-morpheus-700/50 rounded-xl transition-colors group">
                       <div>
                         <div className="font-semibold text-white">{a.name}</div>
