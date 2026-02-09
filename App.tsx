@@ -17,6 +17,8 @@ import {
 import PlatformOverview from './pages/PlatformOverview';
 import Customer360 from './pages/Customer360';
 import AgentPortfolio from './pages/AgentPortfolio';
+import PortfolioList from './pages/PortfolioList';
+import PortfolioDetail from './pages/PortfolioDetail';
 import ActionExecutor from './pages/ActionExecutor';
 import DataNexus from './pages/DataNexus';
 import KnowledgeGraphExplorer from './pages/KnowledgeGraphExplorer';
@@ -167,7 +169,8 @@ const App: React.FC = () => {
         <main className="lg:ml-64 min-h-screen transition-all duration-300">
           <Routes>
             <Route path="/" element={<PlatformOverview />} />
-            <Route path="/morpheus360" element={<AgentPortfolio />} />
+            <Route path="/morpheus360" element={<PortfolioList />} />
+            <Route path="/morpheus360/portfolio/:id" element={<PortfolioDetail />} />
             <Route path="/customer/360" element={<Customer360 />} />
             <Route path="/integration" element={<DataNexus />} />
             <Route path="/knowledge-graph" element={<KnowledgeGraphExplorer />} />

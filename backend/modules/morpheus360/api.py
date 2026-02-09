@@ -9,9 +9,10 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 from google.cloud import bigquery
 
-from core.engines.data_engine import get_data_engine
-from core.engines.scoring_engine import get_scoring_engine
-from core.engines.graph_engine import get_graph_engine
+from .models import Portfolio, PortfolioCreate, PortfolioUpdate
+from .service import portfolio_service
+
+# ... (rest of the file remains, I will append the new routes)
 
 
 # Response models for the API
@@ -490,3 +491,57 @@ async def get_agent_portfolio(limit: int = 100):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+# --- Portfolio CRUD Routes ---
+
+@router.post("/portfolios", response_model=Portfolio)
+async def create_portfolio(portfolio: PortfolioCreate):
+    return portfolio_service.create_portfolio(
+        name=portfolio.name,
+        description=portfolio.description,
+        account_ids=portfolio.account_ids or []
+    )
+
+@router.get("/portfolios", response_model=List[Portfolio])
+async def list_portfolios():
+    return portfolio_service.list_portfolios()
+
+@router.get("/portfolios/{portfolio_id}", response_model=Portfolio)
+async def get_portfolio(portfolio_id: str):
+    p = portfolio_service.get_portfolio(portfolio_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+    return p
+
+@router.put("/portfolios/{portfolio_id}", response_model=Portfolio)
+async def update_portfolio(portfolio_id: str, portfolio: PortfolioUpdate):
+    p = portfolio_service.update_portfolio(
+        portfolio_id=portfolio_id,
+        name=portfolio.name,
+        description=portfolio.description,
+        account_ids=portfolio.account_ids
+    )
+    if not p:
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+    return p
+
+@router.delete("/portfolios/{portfolio_id}")
+async def delete_portfolio(portfolio_id: str):
+    if not portfolio_service.delete_portfolio(portfolio_id):
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+    return {"status": "success"}
+
+@router.get("/portfolios/{portfolio_id}/accounts")
+async def get_portfolio_accounts(portfolio_id: str):
+    p = portfolio_service.get_portfolio(portfolio_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+    
+    if not p.account_ids:
+        return []
+        
+    # In a real scenario, we'd query BigQuery for these specific IDs
+    # For now, let's reuse the logic from get_agent_portfolio but filtered
+    all_accounts = await get_agent_portfolio(limit=1000)
+    filtered = [a for a in all_accounts if a['customer_id'] in p.account_ids]
+    return filtered
