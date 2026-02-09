@@ -481,7 +481,8 @@ async def get_agent_portfolio(limit: int = 100):
                 "health_score": float(health_score),
                 "churn_probability": float(churn_probability),
                 "industry": row['industry'] or "Unknown",
-                "product_count": int(service_count)
+                "product_count": int(service_count),
+                "last_activity": str(row['last_transaction_date']) if row['last_transaction_date'] else None
             })
         
         return portfolio
