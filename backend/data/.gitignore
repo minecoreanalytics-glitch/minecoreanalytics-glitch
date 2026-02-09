@@ -1,0 +1,6 @@
+# Ignore all connection configuration files
+active_connection.json
+*.json
+
+# But track this .gitignore file
+!.gitignore

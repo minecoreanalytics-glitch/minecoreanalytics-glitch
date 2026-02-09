@@ -1,0 +1,12 @@
+Cleanup Evidence - 2026-02-02
+
+Summary:
+- Static audit only (per user request). Build verification skipped due to npm install TAR_ENTRY_ERROR warnings.
+- Removed backup/log artifacts: App-backup.tsx, pages/PlatformOverview.tsx.backup, vite.log.
+
+Rollback:
+- rollback/20260202-232337-pre-cleanup/ (snapshot.tgz + file-manifest.txt)
+
+Command Notes:
+- npm install produced TAR_ENTRY_ERROR warnings and remained running; install was cancelled.
+- npm run build failed prior to install due to missing vite binary.

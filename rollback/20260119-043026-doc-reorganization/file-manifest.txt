@@ -1,0 +1,37 @@
+# File Manifest - Before Documentation Reorganization
+# Date: 2026-01-19T04:30:26Z
+
+## Root Documentation Files (to be migrated or preserved)
+./PRD_MORPHEUS_PLATFORM.md (720 lines) - to be migrated to ./doc/PRD.md
+./PHASE_0_ARCHITECTURE.md (62 lines) - to be migrated to ./doc/architecture.md
+./MVP_ROADMAP.md (116 lines) - to be migrated to ./doc/dev-plan.md
+./README.md (20 lines) - to be preserved in root, updated to reference ./doc/
+./BIGQUERY_SETUP.md - preserved in root
+./DATASET_DISCOVERY.md - preserved in root
+./DEPLOYMENT.md - preserved in root
+./PLATFORM_API_BRIDGE.md - preserved in root
+./TEST_CONNECTION.md - preserved in root
+./TROUBLESHOOT_BLANK_PAGE.md - preserved in root
+
+## Existing Documentation Folder
+./docs/ folder exists (non-standard name)
+./docs/platform_catalog_plan.md (133 lines) - to be migrated to ./doc/
+
+## Files to be Created
+./doc/ (new folder)
+./laststep.md (new file)
+./doc/README.md (new/migrated)
+./doc/PRD.md (migrated)
+./doc/architecture.md (migrated)
+./doc/dev-plan.md (migrated)
+./doc/requirements.md (new stub)
+./doc/decisions.md (new stub)
+./doc/changelog.md (new stub)
+./doc/rollback-policy.md (new stub)
+./doc/platform-catalog-plan.md (migrated)
+
+## State Before Change
+- No ./doc/ folder exists
+- No ./laststep.md exists
+- Documentation scattered in root and ./docs/ folder
+- No standardized documentation structure per Code Mode SOP

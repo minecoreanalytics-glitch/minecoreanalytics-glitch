@@ -1,0 +1,32 @@
+entities:
+  customer:
+    label: "Customer"
+    description: "A business or individual that purchases goods or services."
+    attributes:
+      - name: "customer_id"
+        type: "string"
+      - name: "name"
+        type: "string"
+      - name: "status"
+        type: "string"
+      - name: "industry"
+        type: "string"
+
+  invoice:
+    label: "Invoice"
+    description: "A bill for goods or services."
+    attributes:
+      - name: "invoice_id"
+        type: "string"
+      - name: "amount"
+        type: "number"
+      - name: "status"
+        type: "string"
+      - name: "due_date"
+        type: "date"
+
+relations:
+  - name: "CUSTOMER_HAS_INVOICE"
+    from_entity: "customer"
+    to_entity: "invoice"
+    cardinality: "1:N"

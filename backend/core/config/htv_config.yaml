@@ -1,0 +1,70 @@
+# Morpheus Configuration for HTV Group
+# This config defines the company-specific mappings to BigQuery tables
+
+company: "HTV Group"
+
+# BigQuery connection settings
+bigquery:
+  project_id: "looker-studio-htv"  # Updated to match active connection
+  dataset: "customers"           # Replace with actual dataset name
+
+# Entity mappings - defines how business entities map to BigQuery tables
+entities:
+  # Customer entity
+  customer:
+    table: "customers"
+    id_field: "customer_id"
+    name_field: "customer_name"
+    fields:
+      - "customer_id"
+      - "customer_name"
+      - "status"
+      - "created_at"
+      - "mrr"
+      - "industry"
+      - "country"
+
+  # Invoice entity
+  invoice:
+    table: "invoices"
+    id_field: "invoice_id"
+    foreign_keys:
+      customer_id: "customer_id"
+    fields:
+      - "invoice_id"
+      - "customer_id"
+      - "amount"
+      - "currency"
+      - "due_date"
+      - "paid_date"
+      - "status"
+      - "created_at"
+
+  # Contact entity (for future use)
+  contact:
+    table: "contacts"
+    id_field: "contact_id"
+    foreign_keys:
+      customer_id: "customer_id"
+    fields:
+      - "contact_id"
+      - "customer_id"
+      - "email"
+      - "name"
+      - "role"
+      - "created_at"
+
+  # Interaction entity (for future use)
+  interaction:
+    table: "interactions"
+    id_field: "interaction_id"
+    foreign_keys:
+      customer_id: "customer_id"
+    fields:
+      - "interaction_id"
+      - "customer_id"
+      - "type"
+      - "channel"
+      - "subject"
+      - "sentiment"
+      - "created_at"

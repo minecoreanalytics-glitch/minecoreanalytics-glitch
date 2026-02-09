@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Page</title>
+    <style>
+        body {
+            background: black;
+            color: white;
+            font-family: Arial;
+            padding: 50px;
+            font-size: 24px;
+        }
+        .box {
+            background: red;
+            padding: 20px;
+            margin: 20px;
+            border: 5px solid yellow;
+        }
+    </style>
+</head>
+<body>
+    <h1>TEST PAGE - If you see this, the server works</h1>
+    <div class="box">
+        This is a big red box with yellow border
+    </div>
+    <p>Server is running at: <a href="http://localhost:3000" style="color: cyan;">http://localhost:3000</a></p>
+    <script>
+        console.log("TEST PAGE LOADED SUCCESSFULLY");
+        alert("TEST PAGE LOADED! If you see the main app as blank, there is a React issue.");
+    </script>
+</body>
+</html>

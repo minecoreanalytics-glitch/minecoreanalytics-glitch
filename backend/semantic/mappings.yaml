@@ -1,0 +1,22 @@
+mappings:
+  customer:
+    datasource: "bigquery-main"  # ID of the datasource registered in Catalog
+    dataset: "customers"
+    table: "customers"
+    keys: ["customer_id"]
+    attributes:
+      customer_id: "customer_id"
+      name: "customer_name"
+      status: "status"
+      industry: "industry"
+
+  invoice:
+    datasource: "bigquery-main"
+    dataset: "customers"
+    table: "invoices"
+    keys: ["invoice_id"]
+    attributes:
+      invoice_id: "invoice_id"
+      amount: "amount"
+      status: "status"
+      due_date: "due_date"
