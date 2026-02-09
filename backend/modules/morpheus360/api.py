@@ -97,6 +97,7 @@ async def get_customer_360(customer_id: str):
                 MIN(bc.trans_date) as first_transaction_date,
                 MAX(bc.trans_date) as last_transaction_date,
                 MAX(bc.tariff) as plan_tier,
+                MAX(bc.Status) as account_status,
                 AVG(
                     CASE 
                         WHEN EXTRACT(DAY FROM bc.trans_date) >= 28 THEN 0
@@ -138,6 +139,7 @@ async def get_customer_360(customer_id: str):
             bm.last_transaction_date,
             bm.payment_timing_penalty,
             bm.plan_tier,
+            bm.account_status,
             COALESCE(pb.payment_method_score, 10) as payment_method_score,
             COALESCE(pb.failure_penalty, 0) as failure_penalty,
             COALESCE(pb.lifetime_payments, 0) as lifetime_payments,
@@ -367,6 +369,7 @@ async def get_agent_portfolio(limit: int = 1000):
                 MIN(bc.trans_date) as first_transaction_date,
                 MAX(bc.trans_date) as last_transaction_date,
                 MAX(bc.tariff) as plan_tier,
+                MAX(bc.Status) as account_status,
                 -- Payment timing score
                 AVG(
                     CASE 
@@ -412,6 +415,7 @@ async def get_agent_portfolio(limit: int = 1000):
             bm.last_transaction_date,
             bm.payment_timing_penalty,
             bm.plan_tier,
+            bm.account_status,
             COALESCE(pb.payment_method_score, 10) as payment_method_score,
             COALESCE(pb.failure_penalty, 0) as failure_penalty,
             COALESCE(pb.lifetime_payments, 0) as lifetime_payments,
@@ -436,6 +440,7 @@ async def get_agent_portfolio(limit: int = 1000):
             payment_method_score = row['payment_method_score'] or 10
             failure_penalty = row['failure_penalty'] or 0
             plan_tier = row['plan_tier'] or ''
+            account_status = row.get('account_status') or ''
             account_age_months = row['account_age_months'] or 0
             
             # Sophisticated health score calculation:
@@ -516,7 +521,7 @@ async def get_agent_portfolio(limit: int = 1000):
             portfolio.append({
                 "customer_id": str(row['customer_id']),
                 "name": row['name'],
-                "status": "Active",
+                "status": str(account_status) if account_status else "Active",
                 "activity_level": activity_level,
                 "days_since_last_activity": days_since_last,
                 "mrr": float(total_mrr),
