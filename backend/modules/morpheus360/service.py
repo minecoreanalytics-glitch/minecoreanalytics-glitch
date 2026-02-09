@@ -34,13 +34,14 @@ class PortfolioService:
         except Exception as e:
             print(f"Error saving portfolios: {e}")
 
-    def create_portfolio(self, name: str, description: Optional[str] = None, account_ids: List[str] = []) -> Portfolio:
+    def create_portfolio(self, name: str, description: Optional[str] = None, agent_id: Optional[str] = None, account_ids: List[str] = []) -> Portfolio:
         portfolio_id = str(uuid.uuid4())
         now = datetime.now()
         portfolio = Portfolio(
             id=portfolio_id,
             name=name,
             description=description,
+            agent_id=agent_id,
             account_ids=account_ids,
             created_at=now,
             updated_at=now
@@ -55,7 +56,7 @@ class PortfolioService:
     def get_portfolio(self, portfolio_id: str) -> Optional[Portfolio]:
         return self.portfolios.get(portfolio_id)
 
-    def update_portfolio(self, portfolio_id: str, name: Optional[str] = None, description: Optional[str] = None, account_ids: Optional[List[str]] = None) -> Optional[Portfolio]:
+    def update_portfolio(self, portfolio_id: str, name: Optional[str] = None, description: Optional[str] = None, agent_id: Optional[str] = None, account_ids: Optional[List[str]] = None) -> Optional[Portfolio]:
         if portfolio_id not in self.portfolios:
             return None
         
@@ -64,6 +65,8 @@ class PortfolioService:
             portfolio.name = name
         if description is not None:
             portfolio.description = description
+        if agent_id is not None:
+            portfolio.agent_id = agent_id
         if account_ids is not None:
             portfolio.account_ids = account_ids
         

@@ -28,13 +28,19 @@ const AgentPortfolio: React.FC = () => {
   const fetchPortfolio = async () => {
     try {
       setLoading(true);
+
+      const API_BASE =
+        (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL)
+          ? String(import.meta.env.VITE_API_BASE_URL)
+          : 'http://localhost:8000/api/v1';
+
       // Fetch top customers with their health metrics
-      const response = await fetch('http://localhost:8000/api/v1/morpheus360/portfolio');
-      
+      const response = await fetch(`${API_BASE}/morpheus360/portfolio`);
+
       if (!response.ok) {
         throw new Error('Failed to fetch portfolio');
       }
-      
+
       const data = await response.json();
       setCustomers(data);
       setError(null);

@@ -499,6 +499,7 @@ async def create_portfolio(portfolio: PortfolioCreate):
     return portfolio_service.create_portfolio(
         name=portfolio.name,
         description=portfolio.description,
+        agent_id=portfolio.agent_id,
         account_ids=portfolio.account_ids or []
     )
 
@@ -519,6 +520,7 @@ async def update_portfolio(portfolio_id: str, portfolio: PortfolioUpdate):
         portfolio_id=portfolio_id,
         name=portfolio.name,
         description=portfolio.description,
+        agent_id=portfolio.agent_id,
         account_ids=portfolio.account_ids
     )
     if not p:

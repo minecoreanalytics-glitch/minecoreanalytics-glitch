@@ -44,21 +44,15 @@ const Customer360: React.FC = () => {
       try {
         setLoading(true);
         
-        // First check if BigQuery is connected
+        // Check connection (optional) so we can show a clean error message
         const status = await DataService.getConnectionStatus();
         setConnectionStatus(status);
 
-        if (!status.isConnected) {
-          setError("BigQuery not connected. Please connect in Data Nexus.");
-          setLoading(false);
-          return;
-        }
-
-        // If connected, fetch customer data using the ID from URL
+        // Fetch customer data using the ID from URL
         const customerData = await DataService.getCustomer360(customerId);
         setData(customerData);
       } catch (err) {
-        setError("Failed to load customer context from Knowledge Graph.");
+        setError("Failed to load customer data.");
       } finally {
         setLoading(false);
       }
@@ -70,7 +64,7 @@ const Customer360: React.FC = () => {
     return (
       <div className="h-screen flex flex-col items-center justify-center space-y-4">
         <Loader2 className="animate-spin text-emerald-500" size={48} />
-        <div className="text-sm font-mono text-gray-400 animate-pulse">Querying Morpheus Knowledge Graph...</div>
+        <div className="text-sm font-mono text-gray-400 animate-pulse">Loading customer profile...</div>
       </div>
     );
   }
@@ -86,21 +80,12 @@ const Customer360: React.FC = () => {
             {!connectionStatus?.isConnected ? 'Connect to BigQuery' : 'Connection Error'}
           </h2>
           <p className="text-gray-400 text-sm">{error}</p>
-          {!connectionStatus?.isConnected ? (
-            <button
-              onClick={() => window.location.href = '/#/data-nexus'}
-              className="px-6 py-3 bg-morpheus-accent hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors w-full"
-            >
-              Go to Data Nexus to Connect
-            </button>
-          ) : (
-            <button
-              onClick={() => window.location.reload()}
-              className="px-6 py-3 bg-morpheus-700 hover:bg-morpheus-600 text-white rounded-lg text-sm font-medium transition-colors w-full"
-            >
-              Retry Connection
-            </button>
-          )}
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-morpheus-700 hover:bg-morpheus-600 text-white rounded-lg text-sm font-medium transition-colors w-full"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -254,7 +239,7 @@ const Customer360: React.FC = () => {
            <div className="bg-morpheus-800 rounded-xl border border-morpheus-700 p-5 flex flex-col h-[300px]">
               <h3 className="text-xs font-bold text-gray-400 mb-4 uppercase tracking-widest flex items-center gap-2">
                  <BrainCircuit size={14} className="text-morpheus-accent" />
-                 Morpheus Recommendations
+                 Recommended Actions
               </h3>
               <div className="space-y-3 overflow-y-auto pr-1">
                  {/* Mock recommendations for MVP - will be replaced with ML-driven insights */}

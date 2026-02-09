@@ -16,15 +16,19 @@ class Portfolio(BaseModel):
     created_at: datetime
     updated_at: datetime
     account_ids: List[str] = []
+    # Assignment
+    agent_id: Optional[str] = None
     # Metadata for filtering/UI
     description: Optional[str] = None
 
 class PortfolioCreate(BaseModel):
     name: str
     description: Optional[str] = None
+    agent_id: Optional[str] = None
     account_ids: Optional[List[str]] = []
 
 class PortfolioUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
+    agent_id: Optional[str] = None
     account_ids: Optional[List[str]] = []

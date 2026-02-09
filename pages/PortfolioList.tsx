@@ -17,6 +17,7 @@ interface Portfolio {
   name: string;
   description?: string;
   account_ids: string[];
+  agent_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -27,10 +28,13 @@ const PortfolioList: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newPortfolioName, setNewPortfolioName] = useState('');
   const [newPortfolioDesc, setNewPortfolioDesc] = useState('');
+  const [newPortfolioAgentId, setNewPortfolioAgentId] = useState('agent-1');
   const navigate = useNavigate();
 
-  // Replace with actual API URL from config/env
-  const API_BASE = 'http://76.13.126.66:8000/api/v1';
+  const API_BASE =
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL)
+      ? String(import.meta.env.VITE_API_BASE_URL)
+      : 'http://localhost:8000/api/v1';
 
   useEffect(() => {
     fetchPortfolios();
@@ -57,12 +61,17 @@ const PortfolioList: React.FC = () => {
       const response = await fetch(`${API_BASE}/portfolios`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newPortfolioName, description: newPortfolioDesc })
+        body: JSON.stringify({
+          name: newPortfolioName,
+          description: newPortfolioDesc,
+          agent_id: newPortfolioAgentId || null,
+        })
       });
       if (response.ok) {
         setShowCreateModal(false);
         setNewPortfolioName('');
         setNewPortfolioDesc('');
+        setNewPortfolioAgentId('agent-1');
         fetchPortfolios();
       }
     } catch (err) {
@@ -109,7 +118,7 @@ const PortfolioList: React.FC = () => {
         {portfolios.map(p => (
           <div 
             key={p.id}
-            onClick={() => navigate(`/morpheus360/portfolio/${p.id}`)}
+            onClick={() => navigate(`/manager/portfolio/${p.id}`)}
             className="bg-morpheus-800 border border-morpheus-700 rounded-xl p-6 hover:border-emerald-500/50 transition-all cursor-pointer group relative"
           >
             <div className="flex items-start justify-between mb-4">
@@ -180,6 +189,17 @@ const PortfolioList: React.FC = () => {
                   rows={3}
                   className="w-full bg-morpheus-900 border border-morpheus-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500 transition-colors"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Assign to Agent ID</label>
+                <input
+                  type="text"
+                  value={newPortfolioAgentId}
+                  onChange={(e) => setNewPortfolioAgentId(e.target.value)}
+                  placeholder="agent-1"
+                  className="w-full bg-morpheus-900 border border-morpheus-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                />
+                <p className="text-[11px] text-gray-500 mt-1">Agent will only see portfolios assigned to this ID.</p>
               </div>
             </div>
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { getAuth } from './Login';
 import { 
   ArrowLeft, 
   Users, 
@@ -33,7 +34,10 @@ const PortfolioDetail: React.FC = () => {
   const [availableAccounts, setAvailableAccounts] = useState<Account[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const API_BASE = 'http://76.13.126.66:8000/api/v1';
+  const API_BASE =
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL)
+      ? String(import.meta.env.VITE_API_BASE_URL)
+      : 'http://localhost:8000/api/v1';
 
   useEffect(() => {
     fetchPortfolioData();
@@ -110,6 +114,8 @@ const PortfolioDetail: React.FC = () => {
     </div>
   );
 
+  const role = getAuth()?.role;
+
   const totalMRR = accounts.reduce((sum, a) => sum + (a.mrr || 0), 0);
   const avgHealth = accounts.length > 0 
     ? accounts.reduce((sum, a) => sum + (a.health_score || 0), 0) / accounts.length 
@@ -118,7 +124,7 @@ const PortfolioDetail: React.FC = () => {
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <button 
-        onClick={() => navigate('/morpheus360')}
+        onClick={() => navigate(getAuth()?.role === 'manager' ? '/manager' : '/agent')}
         className="flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors"
       >
         <ArrowLeft size={18} />
@@ -134,18 +140,23 @@ const PortfolioDetail: React.FC = () => {
             </span>
           </div>
           <p className="text-gray-400 max-w-2xl">{portfolio?.description || 'Strategic monitoring for selected accounts.'}</p>
+          <div className="mt-2 text-xs text-gray-500">
+            Assigned Agent ID: <span className="font-mono text-gray-300">{portfolio?.agent_id || '—'}</span>
+          </div>
         </div>
         
-        <button 
-          onClick={() => {
-            fetchAvailableAccounts();
-            setShowAddModal(true);
-          }}
-          className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-emerald-600/20"
-        >
-          <Plus size={20} />
-          Add Accounts
-        </button>
+        {role === 'manager' && (
+          <button 
+            onClick={() => {
+              fetchAvailableAccounts();
+              setShowAddModal(true);
+            }}
+            className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-emerald-600/20"
+          >
+            <Plus size={20} />
+            Add Clients
+          </button>
+        )}
       </div>
 
       {/* Summary Stats */}
@@ -202,7 +213,10 @@ const PortfolioDetail: React.FC = () => {
               <tr 
                 key={account.customer_id}
                 className="hover:bg-morpheus-700/30 transition-colors cursor-pointer"
-                onClick={() => navigate(`/customer/360?id=${account.customer_id}`)}
+                onClick={() => {
+                  const role = getAuth()?.role;
+                  navigate(`${role === 'manager' ? '/manager' : '/agent'}/customer/360?id=${account.customer_id}`);
+                }}
               >
                 <td className="px-6 py-4">
                   <div className="font-semibold text-white">{account.name}</div>
@@ -228,15 +242,20 @@ const PortfolioDetail: React.FC = () => {
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveAccount(account.customer_id);
-                    }}
-                    className="text-gray-500 hover:text-red-400 p-2 transition-colors"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                  {role === 'manager' ? (
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveAccount(account.customer_id);
+                      }}
+                      className="text-gray-500 hover:text-red-400 p-2 transition-colors"
+                      title="Remove client"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  ) : (
+                    <span className="text-xs text-gray-500">View</span>
+                  )}
                 </td>
               </tr>
             ))}
@@ -252,7 +271,7 @@ const PortfolioDetail: React.FC = () => {
       </div>
 
       {/* Add Accounts Modal */}
-      {showAddModal && (
+      {role === 'manager' && showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-morpheus-800 border border-morpheus-700 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
             <div className="p-6 border-b border-morpheus-700 flex items-center justify-between">
