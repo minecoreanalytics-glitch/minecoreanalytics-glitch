@@ -10,8 +10,26 @@ import {
   Search,
   Filter,
   CheckCircle2,
-  XCircle
+  XCircle,
+  BarChart3,
+  PieChart as PieIcon,
+  AlertTriangle,
+  Activity as ActivityIcon
 } from 'lucide-react';
+
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Legend,
+} from 'recharts';
 
 interface Account {
   customer_id: string;
@@ -162,6 +180,75 @@ const PortfolioDetail: React.FC = () => {
     ? accounts.reduce((sum, a) => sum + (a.health_score || 0), 0) / accounts.length 
     : 0;
 
+  // --- Portfolio 360 KPIs (computed client-side) ---
+  const atRiskAccounts = accounts.filter(a => (a.health_score || 0) < 70);
+  const atRiskMRR = atRiskAccounts.reduce((s, a) => s + (a.mrr || 0), 0);
+  const atRiskPct = totalMRR > 0 ? Math.round((atRiskMRR / totalMRR) * 100) : 0;
+
+  const top5 = [...accounts].sort((a, b) => (b.mrr || 0) - (a.mrr || 0)).slice(0, 5);
+  const top5MRR = top5.reduce((s, a) => s + (a.mrr || 0), 0);
+  const top5Pct = totalMRR > 0 ? Math.round((top5MRR / totalMRR) * 100) : 0;
+
+  const activityCounts = accounts.reduce(
+    (acc, a) => {
+      const lvl = (a.activity_level || 'Unknown') as string;
+      acc[lvl] = (acc[lvl] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
+
+  const statusCounts = accounts.reduce(
+    (acc, a) => {
+      const st = (a.status || 'Unknown') as string;
+      acc[st] = (acc[st] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
+
+  const failedPaymentAccounts = accounts.filter(a => (a.health_factors?.failed_payments_10m || 0) > 0);
+
+  const activityPieData = ['High', 'Mid', 'Low', 'Unknown'].map((k) => ({ name: k, value: activityCounts[k] || 0 }));
+  const statusPieData = Object.keys(statusCounts)
+    .sort((a, b) => (statusCounts[b] || 0) - (statusCounts[a] || 0))
+    .slice(0, 8)
+    .map((k) => ({ name: k, value: statusCounts[k] || 0 }));
+
+  const healthBuckets = [
+    { bucket: '0-40', min: 0, max: 40 },
+    { bucket: '40-70', min: 40, max: 70 },
+    { bucket: '70-85', min: 70, max: 85 },
+    { bucket: '85-100', min: 85, max: 101 },
+  ];
+  const healthDistData = healthBuckets.map(b => ({
+    bucket: b.bucket,
+    clients: accounts.filter(a => (a.health_score || 0) >= b.min && (a.health_score || 0) < b.max).length,
+  }));
+
+  const mrrBuckets = [
+    { bucket: '$0–$5k', min: 0, max: 5000 },
+    { bucket: '$5k–$20k', min: 5000, max: 20000 },
+    { bucket: '$20k–$100k', min: 20000, max: 100000 },
+    { bucket: '$100k+', min: 100000, max: Infinity },
+  ];
+  const mrrDistData = mrrBuckets.map(b => ({
+    bucket: b.bucket,
+    clients: accounts.filter(a => (a.mrr || 0) >= b.min && (a.mrr || 0) < b.max).length,
+  }));
+
+  const top10MrrData = [...accounts]
+    .sort((a, b) => (b.mrr || 0) - (a.mrr || 0))
+    .slice(0, 10)
+    .map(a => ({ name: a.name, mrr: Math.round(a.mrr || 0) }));
+
+  const COLORS = {
+    High: '#34d399',
+    Mid: '#60a5fa',
+    Low: '#f87171',
+    Unknown: '#9ca3af',
+  } as Record<string, string>;
+
   const filteredAvailableAccounts = availableAccounts
     .filter(a => {
       const q = searchQuery.trim().toLowerCase();
@@ -287,6 +374,158 @@ const PortfolioDetail: React.FC = () => {
       )}
 
       {/* Summary Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div className="bg-morpheus-800 border border-morpheus-700 rounded-2xl p-6">
+          <p className="text-gray-500 text-sm font-medium mb-1 uppercase tracking-wider">Total Accounts</p>
+          <div className="flex items-center gap-3">
+            <h2 className="text-3xl font-bold text-white">{accounts.length}</h2>
+            <Users className="text-blue-400 opacity-50" size={24} />
+          </div>
+        </div>
+        <div className="bg-morpheus-800 border border-morpheus-700 rounded-2xl p-6">
+          <p className="text-gray-500 text-sm font-medium mb-1 uppercase tracking-wider">Portfolio MRR</p>
+          <div className="flex items-center gap-3">
+            <h2 className="text-3xl font-bold text-emerald-400">${totalMRR.toLocaleString()}</h2>
+            <TrendingUp className="text-emerald-400 opacity-50" size={24} />
+          </div>
+        </div>
+        <div className="bg-morpheus-800 border border-morpheus-700 rounded-2xl p-6">
+          <p className="text-gray-500 text-sm font-medium mb-1 uppercase tracking-wider">Avg. Health Score</p>
+          <div className="flex items-center gap-3">
+            <h2 className={`text-3xl font-bold ${avgHealth > 70 ? 'text-green-400' : 'text-orange-400'}`}>
+              {Math.round(avgHealth)}%
+            </h2>
+          </div>
+        </div>
+      </div>
+
+      {/* Portfolio 360 KPIs + Graphs (Agent view) */}
+      {role === 'agent' && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div className="bg-morpheus-800 border border-morpheus-700 rounded-2xl p-6">
+              <p className="text-gray-500 text-sm font-medium mb-1 uppercase tracking-wider">At-Risk Accounts</p>
+              <div className="flex items-center gap-3">
+                <h2 className="text-3xl font-bold text-white">{atRiskAccounts.length}</h2>
+                <AlertTriangle className="text-orange-400 opacity-70" size={22} />
+              </div>
+              <div className="text-xs text-gray-400 mt-2">Health &lt; 70</div>
+            </div>
+
+            <div className="bg-morpheus-800 border border-morpheus-700 rounded-2xl p-6">
+              <p className="text-gray-500 text-sm font-medium mb-1 uppercase tracking-wider">At-Risk MRR</p>
+              <div className="flex items-center gap-3">
+                <h2 className="text-3xl font-bold text-orange-300">${Math.round(atRiskMRR).toLocaleString()}</h2>
+                <BarChart3 className="text-orange-300 opacity-60" size={22} />
+              </div>
+              <div className="text-xs text-gray-400 mt-2">{atRiskPct}% of portfolio MRR</div>
+            </div>
+
+            <div className="bg-morpheus-800 border border-morpheus-700 rounded-2xl p-6">
+              <p className="text-gray-500 text-sm font-medium mb-1 uppercase tracking-wider">Revenue Concentration</p>
+              <div className="flex items-center gap-3">
+                <h2 className="text-3xl font-bold text-white">{top5Pct}%</h2>
+                <PieIcon className="text-blue-300 opacity-60" size={22} />
+              </div>
+              <div className="text-xs text-gray-400 mt-2">Top 5 accounts share of MRR</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+            <div className="bg-morpheus-800 border border-morpheus-700 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <div className="text-sm font-semibold text-white">Activity Mix</div>
+                  <div className="text-xs text-gray-400">High (≤30d) / Mid (31–60d) / Low (60+d)</div>
+                </div>
+              </div>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={activityPieData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={2}>
+                      {activityPieData.map((entry, idx) => (
+                        <Cell key={`cell-${idx}`} fill={COLORS[entry.name] || '#9ca3af'} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="text-xs text-gray-400 mt-2">
+                Failed-payment accounts: <span className="font-mono text-gray-200">{failedPaymentAccounts.length}</span>
+              </div>
+            </div>
+
+            <div className="bg-morpheus-800 border border-morpheus-700 rounded-2xl p-6">
+              <div className="text-sm font-semibold text-white mb-3">Top 10 Accounts by MRR</div>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={top10MrrData} layout="vertical" margin={{ left: 30, right: 10, top: 10, bottom: 10 }}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                    <XAxis type="number" />
+                    <YAxis type="category" dataKey="name" width={140} tick={{ fill: '#9ca3af', fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="mrr" fill="#34d399" radius={[0, 6, 6, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+            <div className="bg-morpheus-800 border border-morpheus-700 rounded-2xl p-6">
+              <div className="text-sm font-semibold text-white mb-3">Health Score Distribution</div>
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={healthDistData}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                    <XAxis dataKey="bucket" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip />
+                    <Bar dataKey="clients" fill="#60a5fa" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="bg-morpheus-800 border border-morpheus-700 rounded-2xl p-6">
+              <div className="text-sm font-semibold text-white mb-3">MRR Distribution</div>
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={mrrDistData}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                    <XAxis dataKey="bucket" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip />
+                    <Bar dataKey="clients" fill="#a78bfa" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          {statusPieData.length > 0 && (
+            <div className="mb-10 bg-morpheus-800 border border-morpheus-700 rounded-2xl p-6">
+              <div className="text-sm font-semibold text-white mb-3">Status Mix (BigQuery)</div>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={statusPieData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={2}>
+                      {statusPieData.map((entry, idx) => (
+                        <Cell key={`s-${idx}`} fill={["#34d399", "#60a5fa", "#fbbf24", "#f87171", "#a78bfa", "#22c55e", "#38bdf8", "#fb7185"][idx % 8]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         <div className="bg-morpheus-800 border border-morpheus-700 rounded-2xl p-6">
           <p className="text-gray-500 text-sm font-medium mb-1 uppercase tracking-wider">Total Accounts</p>
