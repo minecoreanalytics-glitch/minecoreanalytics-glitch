@@ -69,7 +69,8 @@ const PortfolioDetail: React.FC = () => {
 
   const fetchAvailableAccounts = async () => {
     try {
-      const res = await fetch(`${API_BASE}/morpheus360/portfolio`);
+      // Pull more than 100 so manager can build real portfolios.
+      const res = await fetch(`${API_BASE}/morpheus360/portfolio?limit=5000`);
       if (res.ok) {
         const data = await res.json();
         // Filter out those already in portfolio
@@ -83,15 +84,37 @@ const PortfolioDetail: React.FC = () => {
 
   const handleAddAccount = async (accountId: string) => {
     try {
-      const updatedIds = [...portfolio.account_ids, accountId];
+      const updatedIds = Array.from(new Set([...(portfolio?.account_ids || []), accountId]));
       const res = await fetch(`${API_BASE}/portfolios/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ account_ids: updatedIds })
       });
       if (res.ok) {
-        fetchPortfolioData();
-        setShowAddModal(false);
+        await fetchPortfolioData();
+        // Keep the modal open so manager can add multiple clients quickly
+        await fetchAvailableAccounts();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAddAllFiltered = async () => {
+    try {
+      const toAdd = filteredAvailableAccounts.map(a => a.customer_id);
+      if (toAdd.length === 0) return;
+
+      const updatedIds = Array.from(new Set([...(portfolio?.account_ids || []), ...toAdd]));
+      const res = await fetch(`${API_BASE}/portfolios/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ account_ids: updatedIds })
+      });
+
+      if (res.ok) {
+        await fetchPortfolioData();
+        await fetchAvailableAccounts();
       }
     } catch (err) {
       console.error(err);
@@ -356,6 +379,15 @@ const PortfolioDetail: React.FC = () => {
                   className="text-xs px-3 py-2 rounded-lg border border-morpheus-700 text-gray-300 hover:bg-morpheus-800"
                 >
                   Clear filters
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleAddAllFiltered}
+                  disabled={filteredAvailableAccounts.length === 0}
+                  className="text-xs px-3 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Add all ({filteredAvailableAccounts.length})
                 </button>
               </div>
             </div>

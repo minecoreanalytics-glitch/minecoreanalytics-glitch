@@ -314,7 +314,7 @@ async def list_customers(limit: int = 50, offset: int = 0):
 
 
 @router.get("/morpheus360/portfolio", response_model=List[Dict[str, Any]])
-async def get_agent_portfolio(limit: int = 100):
+async def get_agent_portfolio(limit: int = 1000):
     """
     Get agent's portfolio with health scores for all clients.
     
@@ -347,6 +347,9 @@ async def get_agent_portfolio(limit: int = 100):
         # 3. Number of services (more = better)
         # 4. Plan tier (BIZ > others)
         # 5. Account age (older = more stable)
+        # Safety: cap to avoid runaway queries
+        limit = max(1, min(int(limit), 5000))
+
         query = f"""
         WITH latest_month AS (
             SELECT MAX(trans_date) as latest_date
