@@ -92,6 +92,21 @@ const Customer360: React.FC = () => {
   }
 
   const metrics = data.metrics;
+
+  const invoices = data.invoices || [];
+  const recentPayments = invoices
+    .filter(i => i.amount)
+    .slice(0, 12)
+    .map((i, idx) => ({ name: i.paid_date || i.due_date || String(idx+1), amount: i.amount }));
+
+  const kpi = [
+    { label: 'Status', value: (data as any).status || '—' },
+    { label: 'Activity', value: (data as any).activity_level ? `${(data as any).activity_level}${typeof (data as any).days_since_last_activity === 'number' ? ` (${(data as any).days_since_last_activity}d)` : ''}` : '—' },
+    { label: 'MRR', value: metrics.mrr ? `$${Math.round(metrics.mrr).toLocaleString()}` : '—' },
+    { label: 'Health', value: `${Math.round(metrics.health_score)}%` },
+    { label: 'Churn', value: `${Math.round(metrics.churn_probability)}%` },
+    { label: 'Products', value: String((data as any).product_count ?? '—') },
+  ];
   
   // Create CNS component breakdown from overall CNS score
   // For MVP, we derive components from the overall CNS score with some variance
@@ -103,6 +118,14 @@ const Customer360: React.FC = () => {
     { subject: 'Interaction', A: Math.min(100, cnsScore * 0.9), fullMark: 100 },
   ];
 
+  // --- Customer 360 KPIs + mini charts (portfolio-style) ---
+  const healthColor = metrics.health_score >= 80 ? 'text-green-400' : metrics.health_score >= 70 ? 'text-emerald-300' : metrics.health_score >= 40 ? 'text-orange-300' : 'text-red-400';
+
+  const invoiceChartData = (data.invoices || []).slice(0, 12).map((inv, i) => ({
+    name: inv.paid_date || inv.due_date || String(i + 1),
+    amount: inv.amount || 0,
+  })).reverse();
+
   // Churn Gauge Data
   const churnRisk = metrics.churn_probability;
   const churnData = [
@@ -112,6 +135,63 @@ const Customer360: React.FC = () => {
   const CHURN_COLORS = ['#EF4444', '#1F2937']; // Red for risk, dark for remaining
 
   return (
+    <>
+      {/* Customer 360 KPI Grid */}
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="flex items-end justify-between gap-6 mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-white">{data.name}</h1>
+            <div className="text-sm text-gray-400">Account ID: <span className="font-mono text-gray-200">{data.customer_id}</span></div>
+            {(data as any).health_explanation && (
+              <div className="text-xs text-gray-500 mt-2">Why: <span className="text-gray-300">{(data as any).health_explanation}</span></div>
+            )}
+          </div>
+          <div className="text-right">
+            <div className="text-xs text-gray-500 uppercase tracking-wider">Health</div>
+            <div className={`text-3xl font-bold ${healthColor}`}>{Math.round(metrics.health_score)}%</div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          {kpi.map((k) => (
+            <div key={k.label} className="bg-morpheus-800 border border-morpheus-700 rounded-xl p-4">
+              <div className="text-xs text-gray-500 uppercase tracking-wider">{k.label}</div>
+              <div className="text-lg font-semibold text-white mt-1">{k.value}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+          <div className="bg-morpheus-800 border border-morpheus-700 rounded-2xl p-6">
+            <div className="text-sm font-semibold text-white mb-3">Health Breakdown (CNS)</div>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart data={radarData}>
+                  <PolarGrid stroke="#334155" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fill: '#9ca3af', fontSize: 11 }} />
+                  <PolarRadiusAxis tick={{ fill: '#6b7280', fontSize: 10 }} />
+                  <Radar name="CNS" dataKey="A" stroke="#34d399" fill="#34d399" fillOpacity={0.25} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-morpheus-800 border border-morpheus-700 rounded-2xl p-6">
+            <div className="text-sm font-semibold text-white mb-3">Recent Invoice Amounts</div>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={invoiceChartData}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 10 }} />
+                  <YAxis tick={{ fill: '#9ca3af', fontSize: 10 }} />
+                  <Tooltip />
+                  <Bar dataKey="amount" fill="#60a5fa" radius={[6,6,0,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      </div>
     <div className="p-6 max-w-[1600px] mx-auto space-y-6 animate-fade-in">
       
       {/* Module Branding / Header */}
@@ -453,6 +533,7 @@ const Customer360: React.FC = () => {
 
       </div>
     </div>
+    </>
   );
 };
 

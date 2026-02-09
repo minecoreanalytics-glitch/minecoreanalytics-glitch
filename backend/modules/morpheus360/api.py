@@ -47,6 +47,13 @@ class Customer360Response(BaseModel):
     customer_id: str
     name: str
     status: str
+    activity_level: Optional[str] = None
+    days_since_last_activity: Optional[int] = None
+    plan_tier: Optional[str] = None
+    product_count: Optional[int] = None
+    last_activity: Optional[str] = None
+    health_explanation: Optional[str] = None
+    health_factors: Optional[Dict[str, Any]] = None
     created_at: Optional[str] = None
     industry: Optional[str] = None
     country: Optional[str] = None
@@ -228,10 +235,66 @@ async def get_customer_360(customer_id: str):
                 "timestamp": inv.paid_date
             })
         
+        # Activity recency
+        try:
+            from datetime import date
+            last_dt = row['last_transaction_date']
+            days_since_last = (date.today() - last_dt).days if last_dt else None
+        except Exception:
+            days_since_last = None
+
+        if days_since_last is None:
+            activity_level = "Unknown"
+        elif days_since_last <= 30:
+            activity_level = "High"
+        elif days_since_last <= 60:
+            activity_level = "Mid"
+        else:
+            activity_level = "Low"
+
+        # Human-readable explanation (same signals as portfolio)
+        reasons = []
+        if failure_penalty and failure_penalty > 0:
+            reasons.append(f"{int(failure_penalty/20)} failed payments (10m)")
+        if payment_method_score >= 45:
+            reasons.append("paid by credit card")
+        elif payment_method_score <= 15:
+            reasons.append("high-risk payment method")
+        if service_count >= 20:
+            reasons.append("high product adoption")
+        elif service_count <= 3:
+            reasons.append("low product adoption")
+        # payment_timing_penalty to points
+        timing_points_local = max(0, 10 - (payment_timing_penalty / 2))
+        if timing_points_local <= 4:
+            reasons.append("late payment timing")
+        if account_age_months >= 24:
+            reasons.append("long tenure")
+        elif account_age_months <= 3:
+            reasons.append("new account")
+
+        explanation = "; ".join(reasons) if reasons else "stable signals"
+
+        status_val = str(row.get('account_status') or "Active")
+
         return Customer360Response(
             customer_id=str(row['customer_id']),
             name=row['name'],
-            status="Active",
+            status=status_val,
+            activity_level=activity_level,
+            days_since_last_activity=days_since_last,
+            plan_tier=str(row.get('plan_tier') or ''),
+            product_count=int(row.get('service_count') or 0),
+            last_activity=row['last_transaction_date'].isoformat() if row.get('last_transaction_date') else None,
+            health_explanation=explanation,
+            health_factors={
+                "payment_method_score": float(payment_method_score),
+                "failed_payments_10m": int(failure_penalty / 20) if failure_penalty else 0,
+                "service_count": int(service_count),
+                "plan_tier": str(row.get('plan_tier') or ''),
+                "account_age_months": int(account_age_months),
+                "timing_points": float(timing_points_local),
+            },
             created_at=row['first_transaction_date'].isoformat() if row['first_transaction_date'] else None,
             industry=row['industry'] or "Unknown",
             country="HT",
