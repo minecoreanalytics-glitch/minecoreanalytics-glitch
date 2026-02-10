@@ -108,14 +108,43 @@ const Customer360: React.FC = () => {
     { label: 'Products', value: String((data as any).product_count ?? '—') },
   ];
   
-  // Create CNS component breakdown from overall CNS score
-  // For MVP, we derive components from the overall CNS score with some variance
-  const cnsScore = metrics.cns;
+  // CNS breakdown must be grounded in real signals.
+  // If a signal is missing, keep it at 0 (no simulation).
+  const hf = ((data as any)?.health_factors || {}) as {
+    payment_method_score?: number;
+    failed_payments_10m?: number;
+    service_count?: number;
+    plan_tier?: string;
+    account_age_months?: number;
+    timing_points?: number;
+  };
+
+  const billingScore = typeof hf.payment_method_score === 'number'
+    ? Math.max(0, Math.min(100, (hf.payment_method_score / 50) * 100))
+    : 0;
+
+  const adoptionScore = typeof hf.service_count === 'number'
+    ? Math.max(0, Math.min(100, (hf.service_count / 25) * 100))
+    : 0;
+
+  const stabilityScore = typeof hf.failed_payments_10m === 'number'
+    ? Math.max(0, Math.min(100, 100 - (hf.failed_payments_10m * 20)))
+    : 0;
+
+  const timingScore = typeof hf.timing_points === 'number'
+    ? Math.max(0, Math.min(100, (hf.timing_points / 10) * 100))
+    : 0;
+
+  const tenureScore = typeof hf.account_age_months === 'number'
+    ? Math.max(0, Math.min(100, (hf.account_age_months / 24) * 100))
+    : 0;
+
   const radarData = [
-    { subject: 'Billing', A: Math.min(100, cnsScore * 1.1), fullMark: 100 },
-    { subject: 'Service', A: Math.min(100, cnsScore * 0.95), fullMark: 100 },
-    { subject: 'Equipment', A: Math.min(100, cnsScore * 1.05), fullMark: 100 },
-    { subject: 'Interaction', A: Math.min(100, cnsScore * 0.9), fullMark: 100 },
+    { subject: 'Billing', A: billingScore, fullMark: 100 },
+    { subject: 'Adoption', A: adoptionScore, fullMark: 100 },
+    { subject: 'Stability', A: stabilityScore, fullMark: 100 },
+    { subject: 'Timing', A: timingScore, fullMark: 100 },
+    { subject: 'Tenure', A: tenureScore, fullMark: 100 },
   ];
 
   // --- Customer 360 KPIs + mini charts (portfolio-style) ---
