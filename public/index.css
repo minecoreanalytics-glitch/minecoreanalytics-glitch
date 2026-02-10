@@ -1,0 +1,7 @@
+/* M360 static CSS served at /index.css (keeps legacy link working).
+   Most styling is via Tailwind classes, but we provide safe defaults. */
+
+html, body {
+  background: #0B0F19;
+  color: #F3F4F6;
+}
