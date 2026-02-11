@@ -105,6 +105,7 @@ const Customer360: React.FC = () => {
   }
 
   const metrics = data.metrics;
+  const cnsScore = metrics.cns;
 
   const invoices = data.invoices || [];
   const recentPayments = invoices
