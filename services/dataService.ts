@@ -1,18 +1,14 @@
 
 import { MOCK_CUSTOMER_DATA, SYSTEM_LOGS, MOCK_ACTIONS } from '../constants';
 import { FullCustomerView, ActionItem, Integration, DataSourceConfig } from '../types';
+import { resolveApiBase, resolveStoredOrDefaultApiBase } from './apiBase';
 
 // Storage keys for persisting configuration across reloads
 const STORAGE_KEY_URL = 'morpheus_core_url';
 const STORAGE_KEY_MODE = 'morpheus_live_mode';
 
-// Resolve API base URL with environment override and Cloud Run fallback
-const DEFAULT_API_URL =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL)
-    ? String(import.meta.env.VITE_API_BASE_URL)
-    : (typeof window !== 'undefined' && window.location.host.includes('morpheus-frontend-78704783250.us-central1.run.app'))
-      ? 'https://morpheus-backend-78704783250.us-central1.run.app/api/v1'
-      : 'http://localhost:8000/api/v1';
+// Resolve API base URL once per session; persisted values can still override.
+const DEFAULT_API_URL = resolveApiBase();
 
 /**
  * The DataService now acts as a full HTTP Client Proxy.
@@ -23,11 +19,12 @@ export const DataService = {
   // --- Configuration Management ---
 
   getApiUrl: (): string => {
-    return localStorage.getItem(STORAGE_KEY_URL) || DEFAULT_API_URL;
+    return resolveStoredOrDefaultApiBase(localStorage.getItem(STORAGE_KEY_URL)) || DEFAULT_API_URL;
   },
 
   setApiUrl: (url: string) => {
-    localStorage.setItem(STORAGE_KEY_URL, url);
+    const normalized = resolveStoredOrDefaultApiBase(url);
+    localStorage.setItem(STORAGE_KEY_URL, normalized);
   },
 
   isLiveMode: (): boolean => {
@@ -651,4 +648,3 @@ export const DataService = {
     );
   }
 };
-

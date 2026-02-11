@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { resolveApiBase } from '../services/apiBase';
 
 interface CustomerSummary {
   customer_id: string;
@@ -12,6 +13,8 @@ interface CustomerSummary {
   industry: string;
   last_activity?: string;
 }
+
+const API_BASE = resolveApiBase();
 
 const AgentPortfolio: React.FC = () => {
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
@@ -28,11 +31,6 @@ const AgentPortfolio: React.FC = () => {
   const fetchPortfolio = async () => {
     try {
       setLoading(true);
-
-      const API_BASE =
-        (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL)
-          ? String(import.meta.env.VITE_API_BASE_URL)
-          : 'http://localhost:8000/api/v1';
 
       // Fetch top customers with their health metrics
       const response = await fetch(`${API_BASE}/morpheus360/portfolio`);

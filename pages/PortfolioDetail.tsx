@@ -30,6 +30,7 @@ import {
   CartesianGrid,
   Legend,
 } from 'recharts';
+import { resolveApiBase } from '../services/apiBase';
 
 interface Account {
   customer_id: string;
@@ -53,6 +54,8 @@ interface Account {
   };
 }
 
+const API_BASE = resolveApiBase();
+
 const PortfolioDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -69,11 +72,6 @@ const PortfolioDetail: React.FC = () => {
   const [minMRR, setMinMRR] = useState<string>('');
   const [minProducts, setMinProducts] = useState<string>('');
   const [activeSince, setActiveSince] = useState<string>('');
-
-  const API_BASE =
-    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL)
-      ? String(import.meta.env.VITE_API_BASE_URL)
-      : 'http://localhost:8000/api/v1';
 
   useEffect(() => {
     fetchPortfolioData();

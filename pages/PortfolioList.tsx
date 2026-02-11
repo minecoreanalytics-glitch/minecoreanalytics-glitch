@@ -11,6 +11,7 @@ import {
   TrendingUp,
   AlertTriangle
 } from 'lucide-react';
+import { resolveApiBase } from '../services/apiBase';
 
 interface Portfolio {
   id: string;
@@ -22,6 +23,8 @@ interface Portfolio {
   updated_at: string;
 }
 
+const API_BASE = resolveApiBase();
+
 const PortfolioList: React.FC = () => {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,11 +33,6 @@ const PortfolioList: React.FC = () => {
   const [newPortfolioDesc, setNewPortfolioDesc] = useState('');
   const [newPortfolioAgentId, setNewPortfolioAgentId] = useState('agent-1');
   const navigate = useNavigate();
-
-  const API_BASE =
-    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL)
-      ? String(import.meta.env.VITE_API_BASE_URL)
-      : 'http://localhost:8000/api/v1';
 
   useEffect(() => {
     fetchPortfolios();

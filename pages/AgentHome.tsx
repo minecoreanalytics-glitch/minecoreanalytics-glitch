@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Folder, ChevronRight, Activity, Users } from 'lucide-react';
 import { getAuth, clearAuth } from './Login';
+import { resolveApiBase } from '../services/apiBase';
 
 interface Portfolio {
   id: string;
@@ -13,14 +14,11 @@ interface Portfolio {
   updated_at: string;
 }
 
+const API_BASE = resolveApiBase();
+
 const AgentHome: React.FC = () => {
   const navigate = useNavigate();
   const auth = getAuth();
-
-  const API_BASE =
-    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL)
-      ? String(import.meta.env.VITE_API_BASE_URL)
-      : 'http://localhost:8000/api/v1';
 
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [loading, setLoading] = useState(true);
