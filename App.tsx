@@ -6,6 +6,8 @@ import ManagerHome from './pages/ManagerHome';
 import AgentHome from './pages/AgentHome';
 import PortfolioDetail from './pages/PortfolioDetail';
 import Customer360 from './pages/Customer360';
+import DataNexus from './pages/DataNexus';
+import KnowledgeGraphExplorer from './pages/KnowledgeGraphExplorer';
 import M360Shell from './components/M360Shell';
 
 const RequireAuth: React.FC<{ role?: 'manager' | 'agent'; children: React.ReactNode }> = ({ role, children }) => {
@@ -36,6 +38,24 @@ const App: React.FC = () => {
             element={
               <RequireAuth role="manager">
                 <PortfolioDetail />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/manager/data-nexus"
+            element={
+              <RequireAuth role="manager">
+                <DataNexus />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/manager/graph"
+            element={
+              <RequireAuth role="manager">
+                <KnowledgeGraphExplorer />
               </RequireAuth>
             }
           />

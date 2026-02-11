@@ -194,7 +194,7 @@ const KnowledgeGraphExplorer: React.FC = () => {
             The Knowledge Graph Explorer requires an active BigQuery connection to visualize your data relationships.
           </p>
           <button
-            onClick={() => window.location.href = '/#/data-nexus'}
+            onClick={() => window.location.href = '/#/manager/data-nexus'}
             className="px-6 py-3 bg-morpheus-accent hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors w-full"
           >
             Go to Data Nexus to Connect

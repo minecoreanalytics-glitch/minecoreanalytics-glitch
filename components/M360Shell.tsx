@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Users, LayoutGrid, Shield } from 'lucide-react';
+import { Users, LayoutGrid, Shield, Database, Share2 } from 'lucide-react';
 import { clearAuth, getAuth } from '../pages/Login';
 
 const M360Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -27,6 +27,12 @@ const M360Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 <>
                   <NavLink to="/manager" className={({ isActive }) => isActive ? 'px-3 py-2 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' : 'px-3 py-2 rounded-lg text-gray-300 hover:bg-morpheus-800'}>
                     <span className="inline-flex items-center gap-2"><Shield size={16}/>Manager</span>
+                  </NavLink>
+                  <NavLink to="/manager/data-nexus" className={({ isActive }) => isActive ? 'px-3 py-2 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' : 'px-3 py-2 rounded-lg text-gray-300 hover:bg-morpheus-800'}>
+                    <span className="inline-flex items-center gap-2"><Database size={16}/>Data</span>
+                  </NavLink>
+                  <NavLink to="/manager/graph" className={({ isActive }) => isActive ? 'px-3 py-2 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' : 'px-3 py-2 rounded-lg text-gray-300 hover:bg-morpheus-800'}>
+                    <span className="inline-flex items-center gap-2"><Share2 size={16}/>Graph</span>
                   </NavLink>
                 </>
               ) : (
