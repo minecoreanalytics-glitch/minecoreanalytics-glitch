@@ -30,3 +30,4 @@ dist-ssr
 # Secrets and local credentials
 temp_creds.json
 env_vars.txt
+backend-data/
