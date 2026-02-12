@@ -5,18 +5,7 @@ import {
   PieChart,
   Pie,
   Cell,
-  Radar,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
   ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
 } from 'recharts';
 import { 
   Building2, 
@@ -105,22 +94,7 @@ const Customer360: React.FC = () => {
   }
 
   const metrics = data.metrics;
-  const cnsScore = metrics.cns;
-
-  const invoices = data.invoices || [];
-  const recentPayments = invoices
-    .filter(i => i.amount)
-    .slice(0, 12)
-    .map((i, idx) => ({ name: i.paid_date || i.due_date || String(idx+1), amount: i.amount }));
-
-  const kpi = [
-    { label: 'Status', value: (data as any).status || '—' },
-    { label: 'Activity', value: (data as any).activity_level ? `${(data as any).activity_level}${typeof (data as any).days_since_last_activity === 'number' ? ` (${(data as any).days_since_last_activity}d)` : ''}` : '—' },
-    { label: 'MRR', value: metrics.mrr ? `$${Math.round(metrics.mrr).toLocaleString()}` : '—' },
-    { label: 'Health', value: `${Math.round(metrics.health_score)}%` },
-    { label: 'Churn', value: `${Math.round(metrics.churn_probability)}%` },
-    { label: 'Products', value: String((data as any).product_count ?? '—') },
-  ];
+  const cnsScore = Math.max(0, Math.min(100, Number(metrics?.cns ?? 0)));
   
   // CNS breakdown must be grounded in real signals.
   // If a signal is missing, keep it at 0 (no simulation).
@@ -131,43 +105,102 @@ const Customer360: React.FC = () => {
     plan_tier?: string;
     account_age_months?: number;
     timing_points?: number;
+    billing_health_score?: number;
+    network_health_score?: number;
+    customer_experience_score?: number;
+    equipment_health_score?: number;
+    tenure_score?: number;
+    domain_breakdown?: {
+      billing?: {
+        score?: number;
+        weight?: number;
+        components?: Array<{ id: string; label: string; score: number; weight: number }>;
+      };
+      network?: {
+        score?: number;
+        weight?: number;
+        components?: Array<{ id: string; label: string; score: number; weight: number }>;
+      };
+      customer_experience?: {
+        score?: number;
+        weight?: number;
+        components?: Array<{ id: string; label: string; score: number; weight: number }>;
+      };
+      equipment?: {
+        score?: number;
+        weight?: number;
+        components?: Array<{ id: string; label: string; score: number; weight: number }>;
+      };
+    };
   };
 
-  const billingScore = typeof hf.payment_method_score === 'number'
-    ? Math.max(0, Math.min(100, (hf.payment_method_score / 50) * 100))
+  const billingScore = typeof hf.billing_health_score === 'number'
+    ? Math.max(0, Math.min(100, hf.billing_health_score))
     : 0;
 
-  const adoptionScore = typeof hf.service_count === 'number'
-    ? Math.max(0, Math.min(100, (hf.service_count / 25) * 100))
+  const networkScore = typeof hf.network_health_score === 'number'
+    ? Math.max(0, Math.min(100, hf.network_health_score))
     : 0;
 
-  const stabilityScore = typeof hf.failed_payments_10m === 'number'
-    ? Math.max(0, Math.min(100, 100 - (hf.failed_payments_10m * 20)))
+  const experienceScore = typeof hf.customer_experience_score === 'number'
+    ? Math.max(0, Math.min(100, hf.customer_experience_score))
     : 0;
 
-  const timingScore = typeof hf.timing_points === 'number'
-    ? Math.max(0, Math.min(100, (hf.timing_points / 10) * 100))
+  const equipmentScore = typeof hf.equipment_health_score === 'number'
+    ? Math.max(0, Math.min(100, hf.equipment_health_score))
     : 0;
 
-  const tenureScore = typeof hf.account_age_months === 'number'
-    ? Math.max(0, Math.min(100, (hf.account_age_months / 24) * 100))
-    : 0;
+  const domainBreakdown = hf.domain_breakdown;
 
-  const radarData = [
-    { subject: 'Billing', A: billingScore, fullMark: 100 },
-    { subject: 'Adoption', A: adoptionScore, fullMark: 100 },
-    { subject: 'Stability', A: stabilityScore, fullMark: 100 },
-    { subject: 'Timing', A: timingScore, fullMark: 100 },
-    { subject: 'Tenure', A: tenureScore, fullMark: 100 },
+  const componentStatus = (score: number) => {
+    if (score >= 80) return 'Excellent';
+    if (score >= 65) return 'Good';
+    if (score >= 45) return 'Watch';
+    return 'At Risk';
+  };
+
+  const domainCards = [
+    {
+      key: 'billing' as const,
+      title: 'Billing Health',
+      score: billingScore,
+      weight: domainBreakdown?.billing?.weight ?? 30,
+      icon: CreditCard,
+      iconColor: 'text-blue-400',
+      barColor: 'bg-blue-500',
+      components: domainBreakdown?.billing?.components ?? [{ id: 'billing_core', label: 'Billing Core', score: billingScore, weight: 100 }],
+    },
+    {
+      key: 'network' as const,
+      title: 'Network Health',
+      score: networkScore,
+      weight: domainBreakdown?.network?.weight ?? 25,
+      icon: Signal,
+      iconColor: 'text-purple-400',
+      barColor: 'bg-purple-500',
+      components: domainBreakdown?.network?.components ?? [{ id: 'network_core', label: 'Network Core', score: networkScore, weight: 100 }],
+    },
+    {
+      key: 'customer_experience' as const,
+      title: 'Customer Experience',
+      score: experienceScore,
+      weight: domainBreakdown?.customer_experience?.weight ?? 25,
+      icon: MessageSquare,
+      iconColor: 'text-pink-400',
+      barColor: 'bg-pink-500',
+      components: domainBreakdown?.customer_experience?.components ?? [{ id: 'experience_core', label: 'Experience Core', score: experienceScore, weight: 100 }],
+    },
+    {
+      key: 'equipment' as const,
+      title: 'Equipment Health',
+      score: equipmentScore,
+      weight: domainBreakdown?.equipment?.weight ?? 20,
+      icon: TrendingUp,
+      iconColor: 'text-amber-400',
+      barColor: 'bg-amber-500',
+      components: domainBreakdown?.equipment?.components ?? [{ id: 'equipment_core', label: 'Equipment Core', score: equipmentScore, weight: 100 }],
+    },
   ];
-
-  // --- Customer 360 KPIs + mini charts (portfolio-style) ---
-  const healthColor = metrics.health_score >= 80 ? 'text-green-400' : metrics.health_score >= 70 ? 'text-emerald-300' : metrics.health_score >= 40 ? 'text-orange-300' : 'text-red-400';
-
-  const invoiceChartData = (data.invoices || []).slice(0, 12).map((inv, i) => ({
-    name: inv.paid_date || inv.due_date || String(i + 1),
-    amount: inv.amount || 0,
-  })).reverse();
 
   // Churn Gauge Data
   const churnRisk = metrics.churn_probability;
@@ -177,64 +210,46 @@ const Customer360: React.FC = () => {
   ];
   const CHURN_COLORS = ['#EF4444', '#1F2937']; // Red for risk, dark for remaining
 
+  const recentActivity = (((data as any)?.recent_activity ?? []) as Array<{
+    type?: string;
+    channel?: string;
+    subject?: string;
+    sentiment?: string;
+    timestamp?: string;
+  }>).slice(0, 5);
+
+  const recommendedActions = [
+    ...domainCards
+      .filter((domain) => domain.score < 60)
+      .map((domain) => ({
+        key: `stabilize-${domain.key}`,
+        tag: 'STABILIZE',
+        title: `Improve ${domain.title}`,
+        description: `${domain.title} is ${Math.round(domain.score)}/100. Focus on lowest sub-components first.`,
+      })),
+    ...(churnRisk >= 40
+      ? [
+          {
+            key: 'churn-escalation',
+            tag: 'RETENTION',
+            title: 'Escalate Churn Mitigation',
+            description: `Churn probability is ${churnRisk.toFixed(1)}%. Trigger retention workflow and agent outreach.`,
+          },
+        ]
+      : []),
+    ...((String((data as any)?.status || '').toLowerCase() === 'on-hold')
+      ? [
+          {
+            key: 'on-hold-recovery',
+            tag: 'RECOVERY',
+            title: 'Resolve On-Hold Account State',
+            description: 'Account is currently On-Hold. Prioritize payment and service unblock sequence.',
+          },
+        ]
+      : []),
+  ].slice(0, 4);
+
   return (
-    <>
-      {/* Customer 360 KPI Grid */}
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="flex items-end justify-between gap-6 mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-white">{data.name}</h1>
-            <div className="text-sm text-gray-400">Account ID: <span className="font-mono text-gray-200">{data.customer_id}</span></div>
-            {(data as any).health_explanation && (
-              <div className="text-xs text-gray-500 mt-2">Why: <span className="text-gray-300">{(data as any).health_explanation}</span></div>
-            )}
-          </div>
-          <div className="text-right">
-            <div className="text-xs text-gray-500 uppercase tracking-wider">Health</div>
-            <div className={`text-3xl font-bold ${healthColor}`}>{Math.round(metrics.health_score)}%</div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          {kpi.map((k) => (
-            <div key={k.label} className="bg-morpheus-800 border border-morpheus-700 rounded-xl p-4">
-              <div className="text-xs text-gray-500 uppercase tracking-wider">{k.label}</div>
-              <div className="text-lg font-semibold text-white mt-1">{k.value}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
-          <div className="bg-morpheus-800 border border-morpheus-700 rounded-2xl p-6">
-            <div className="text-sm font-semibold text-white mb-3">Health Breakdown (CNS)</div>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={radarData}>
-                  <PolarGrid stroke="#334155" />
-                  <PolarAngleAxis dataKey="subject" tick={{ fill: '#9ca3af', fontSize: 11 }} />
-                  <PolarRadiusAxis tick={{ fill: '#6b7280', fontSize: 10 }} />
-                  <Radar name="CNS" dataKey="A" stroke="#34d399" fill="#34d399" fillOpacity={0.25} />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div className="bg-morpheus-800 border border-morpheus-700 rounded-2xl p-6">
-            <div className="text-sm font-semibold text-white mb-3">Recent Invoice Amounts</div>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={invoiceChartData}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                  <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 10 }} />
-                  <YAxis tick={{ fill: '#9ca3af', fontSize: 10 }} />
-                  <Tooltip />
-                  <Bar dataKey="amount" fill="#60a5fa" radius={[6,6,0,0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-      </div>
     <div className="p-6 max-w-[1600px] mx-auto space-y-6 animate-fade-in">
       
       {/* Module Branding / Header */}
@@ -302,8 +317,8 @@ const Customer360: React.FC = () => {
                 </div>
                 <div className="h-8 w-px bg-morpheus-700"></div>
                 <div className="text-right">
-                    <div className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Health Score</div>
-                    <div className="text-xl font-bold text-emerald-400 font-mono">{metrics.health_score}/100</div>
+                    <div className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">CNS Score</div>
+                    <div className="text-xl font-bold text-emerald-400 font-mono">{Math.round(cnsScore)}/100</div>
                 </div>
             </div>
         </div>
@@ -331,8 +346,8 @@ const Customer360: React.FC = () => {
                     <span className="text-gray-200">{data.status}</span>
                 </div>
                 <div className="flex justify-between items-center pt-2">
-                    <span className="text-gray-500">Health Score</span>
-                    <span className="text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded text-xs">{metrics.health_score}/100</span>
+                    <span className="text-gray-500">CNS Score</span>
+                    <span className="text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded text-xs">{Math.round(cnsScore)}/100</span>
                 </div>
               </div>
            </div>
@@ -349,12 +364,12 @@ const Customer360: React.FC = () => {
                   </div>
                   <div className="bg-morpheus-900/50 p-3 rounded-lg border border-morpheus-700/50">
                       <div className="text-xs text-gray-500">CNS Score</div>
-                      <div className="text-lg font-bold text-emerald-400 mt-1">{Math.round(metrics.cns)}/100</div>
+                      <div className="text-lg font-bold text-emerald-400 mt-1">{Math.round(cnsScore)}/100</div>
                   </div>
               </div>
               <div className="mt-4 text-xs text-gray-500 flex justify-between">
                   <span>Data Source</span>
-                  <span className="text-gray-300">BigQuery Live</span>
+                  <span className="text-gray-300">{connectionStatus?.isConnected ? 'BigQuery Live' : 'Not Connected'}</span>
               </div>
            </div>
 
@@ -365,38 +380,36 @@ const Customer360: React.FC = () => {
                  Recommended Actions
               </h3>
               <div className="space-y-3 overflow-y-auto pr-1">
-                 {/* Mock recommendations for MVP - will be replaced with ML-driven insights */}
-                 <div className="bg-morpheus-900/50 border-l-2 border-morpheus-accent p-3 rounded-r-lg hover:bg-morpheus-700/30 transition-colors cursor-pointer group">
-                    <div className="flex justify-between items-start mb-1">
-                        <span className="text-xs font-bold text-morpheus-accent">UPSELL</span>
-                        <ArrowRight size={12} className="text-gray-600 group-hover:text-morpheus-accent transition-colors" />
-                    </div>
-                    <h4 className="text-sm font-semibold text-white mb-1">High-Value Customer</h4>
-                    <p className="text-xs text-gray-400 leading-relaxed">Customer shows strong engagement with MRR ${metrics.mrr?.toLocaleString()}. Consider premium tier upgrade.</p>
-                 </div>
-                 <div className="bg-morpheus-900/50 border-l-2 border-blue-500 p-3 rounded-r-lg hover:bg-morpheus-700/30 transition-colors cursor-pointer group">
-                    <div className="flex justify-between items-start mb-1">
-                        <span className="text-xs font-bold text-blue-400">RETENTION</span>
-                        <ArrowRight size={12} className="text-gray-600 group-hover:text-blue-400 transition-colors" />
-                    </div>
-                    <h4 className="text-sm font-semibold text-white mb-1">Schedule Check-In</h4>
-                    <p className="text-xs text-gray-400 leading-relaxed">Health score at {Math.round(metrics.health_score)}. Proactive outreach recommended.</p>
-                 </div>
+                 {recommendedActions.length === 0 && (
+                   <div className="bg-morpheus-900/50 border border-morpheus-700/60 p-3 rounded-lg">
+                     <p className="text-xs text-gray-400 leading-relaxed">No high-priority actions generated from current live signals.</p>
+                   </div>
+                 )}
+                 {recommendedActions.map((action) => (
+                   <div key={action.key} className="bg-morpheus-900/50 border-l-2 border-morpheus-accent p-3 rounded-r-lg">
+                     <div className="flex justify-between items-start mb-1">
+                       <span className="text-xs font-bold text-morpheus-accent">{action.tag}</span>
+                       <ArrowRight size={12} className="text-gray-500" />
+                     </div>
+                     <h4 className="text-sm font-semibold text-white mb-1">{action.title}</h4>
+                     <p className="text-xs text-gray-400 leading-relaxed">{action.description}</p>
+                   </div>
+                 ))}
               </div>
            </div>
         </div>
 
-        {/* Middle: Health Score & Churn Analysis */}
+        {/* Middle: CNS & Churn Analysis */}
         <div className="space-y-6">
             <div className="bg-morpheus-800 rounded-xl border border-morpheus-700 p-6 flex flex-col items-center">
-                 <h3 className="text-xs font-bold text-gray-400 mb-6 uppercase tracking-widest w-full text-left">Customer Health Score</h3>
+                 <h3 className="text-xs font-bold text-gray-400 mb-6 uppercase tracking-widest w-full text-left">Customer CNS Score</h3>
                  <div className="relative w-64 h-64 flex items-center justify-center">
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                             <Pie
                                 data={[
-                                    { name: 'Health', value: metrics.health_score },
-                                    { name: 'Risk', value: 100 - metrics.health_score }
+                                    { name: 'CNS', value: cnsScore },
+                                    { name: 'Gap', value: 100 - cnsScore }
                                 ]}
                                 innerRadius={80}
                                 outerRadius={110}
@@ -412,40 +425,19 @@ const Customer360: React.FC = () => {
                         </PieChart>
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-6xl font-bold text-emerald-400">{Math.round(metrics.health_score)}</span>
-                        <span className="text-sm text-gray-400 mt-2">Health Score</span>
+                        <span className="text-6xl font-bold text-emerald-400">{Math.round(cnsScore)}</span>
+                        <span className="text-sm text-gray-400 mt-2">CNS Score</span>
                     </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 w-full mt-6">
                     <div className="text-center p-3 bg-morpheus-900 rounded-lg">
-                        <div className="text-2xl font-bold text-emerald-400">{Math.round(metrics.cns)}</div>
+                        <div className="text-2xl font-bold text-emerald-400">{Math.round(cnsScore)}</div>
                         <div className="text-[10px] text-gray-500 uppercase">CNS Score</div>
                     </div>
                     <div className="text-center p-3 bg-morpheus-900 rounded-lg">
                         <div className="text-2xl font-bold text-emerald-400">{churnRisk < 30 ? 'LOW' : churnRisk < 50 ? 'MED' : 'HIGH'}</div>
                         <div className="text-[10px] text-gray-500 uppercase">Risk Category</div>
                     </div>
-                </div>
-           </div>
-
-           <div className="bg-morpheus-800 rounded-xl border border-morpheus-700 p-6 flex flex-col items-center">
-                 <h3 className="text-xs font-bold text-gray-400 mb-6 uppercase tracking-widest w-full text-left">Score Breakdown (CNS)</h3>
-                 <div className="h-[280px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
-                            <PolarGrid stroke="#374151" />
-                            <PolarAngleAxis dataKey="subject" tick={{ fill: '#9CA3AF', fontSize: 10 }} />
-                            <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                            <Radar
-                                name="Score"
-                                dataKey="A"
-                                stroke="#10B981"
-                                strokeWidth={2}
-                                fill="#10B981"
-                                fillOpacity={0.2}
-                            />
-                        </RadarChart>
-                    </ResponsiveContainer>
                 </div>
            </div>
 
@@ -478,7 +470,7 @@ const Customer360: React.FC = () => {
                     <div className="flex-1">
                         <div className="text-sm text-gray-300 mb-2">Churn Risk Analysis</div>
                         <p className="text-xs text-gray-500 leading-relaxed">
-                            Probability calculated via Logistic Regression on 248 historical churn events. Key factors: Balance, MRR, Revenue.
+                            Probability is provided by live backend signals for this account and recalculates as source data updates.
                         </p>
                         <div className="mt-3 flex items-center gap-2">
                             <div className={`h-2 rounded-full flex-1 ${churnRisk < 5 ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
@@ -494,66 +486,42 @@ const Customer360: React.FC = () => {
              <h3 className="text-xs font-bold text-gray-400 mb-6 uppercase tracking-widest flex items-center gap-2">
                 <Signal size={14} /> CNS Breakdown
              </h3>
-             <div className="space-y-6">
-                 {/* Item 1 - Derived from overall CNS */}
-                 <div className="group">
-                     <div className="flex justify-between items-center mb-1">
-                         <div className="flex items-center gap-2">
-                             <CreditCard size={14} className="text-blue-400" />
-                             <span className="text-sm font-medium text-gray-200">Billing Health</span>
-                         </div>
-                         <span className="text-sm font-mono text-emerald-400">{Math.round(cnsScore * 1.1)}/100</span>
-                     </div>
-                     <div className="w-full bg-morpheus-900 h-1.5 rounded-full overflow-hidden">
-                         <div className="bg-blue-500 h-full rounded-full" style={{ width: `${Math.min(100, cnsScore * 1.1)}%` }}></div>
-                     </div>
-                     <p className="text-[10px] text-gray-500 mt-1 pl-6">Weight: 30% • Status: Good</p>
-                 </div>
+             <div className="space-y-4">
+                {domainCards.map((domain) => {
+                  const DomainIcon = domain.icon;
+                  return (
+                    <div key={domain.key} className="bg-morpheus-900/40 border border-morpheus-700/50 rounded-lg p-3">
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-2">
+                          <DomainIcon size={14} className={domain.iconColor} />
+                          <span className="text-sm font-medium text-gray-200">{domain.title}</span>
+                        </div>
+                        <span className="text-sm font-mono text-emerald-400">{Math.round(domain.score)}/100</span>
+                      </div>
+                      <div className="w-full bg-morpheus-900 h-1.5 rounded-full overflow-hidden mb-1">
+                        <div className={`${domain.barColor} h-full rounded-full`} style={{ width: `${Math.max(0, Math.min(100, domain.score))}%` }}></div>
+                      </div>
+                      <p className="text-[10px] text-gray-500 mb-3">Weight: {domain.weight}% • Status: {componentStatus(domain.score)}</p>
 
-                 {/* Item 2 */}
-                 <div className="group">
-                     <div className="flex justify-between items-center mb-1">
-                         <div className="flex items-center gap-2">
-                             <Signal size={14} className="text-purple-400" />
-                             <span className="text-sm font-medium text-gray-200">Service Stability</span>
-                         </div>
-                         <span className="text-sm font-mono text-emerald-400">{Math.round(cnsScore * 0.95)}/100</span>
-                     </div>
-                     <div className="w-full bg-morpheus-900 h-1.5 rounded-full overflow-hidden">
-                         <div className="bg-purple-500 h-full rounded-full" style={{ width: `${Math.min(100, cnsScore * 0.95)}%` }}></div>
-                     </div>
-                     <p className="text-[10px] text-gray-500 mt-1 pl-6">Weight: 25% • Status: Stable</p>
-                 </div>
-
-                 {/* Item 3 */}
-                 <div className="group">
-                     <div className="flex justify-between items-center mb-1">
-                         <div className="flex items-center gap-2">
-                             <TrendingUp size={14} className="text-amber-400" />
-                             <span className="text-sm font-medium text-gray-200">Equipment Health</span>
-                         </div>
-                         <span className="text-sm font-mono text-emerald-400">{Math.round(cnsScore * 1.05)}/100</span>
-                     </div>
-                     <div className="w-full bg-morpheus-900 h-1.5 rounded-full overflow-hidden">
-                         <div className="bg-amber-500 h-full rounded-full" style={{ width: `${Math.min(100, cnsScore * 1.05)}%` }}></div>
-                     </div>
-                     <p className="text-[10px] text-gray-500 mt-1 pl-6">Weight: 20% • Status: Optimal</p>
-                 </div>
-
-                 {/* Item 4 */}
-                 <div className="group">
-                     <div className="flex justify-between items-center mb-1">
-                         <div className="flex items-center gap-2">
-                             <MessageSquare size={14} className="text-pink-400" />
-                             <span className="text-sm font-medium text-gray-200">Interaction Quality</span>
-                         </div>
-                         <span className="text-sm font-mono text-emerald-400">{Math.round(cnsScore * 0.9)}/100</span>
-                     </div>
-                     <div className="w-full bg-morpheus-900 h-1.5 rounded-full overflow-hidden">
-                         <div className="bg-pink-500 h-full rounded-full" style={{ width: `${Math.min(100, cnsScore * 0.9)}%` }}></div>
-                     </div>
-                     <p className="text-[10px] text-gray-500 mt-1 pl-6">Weight: 25% • Status: Positive</p>
-                 </div>
+                      <div className="space-y-2">
+                        {(domain.key === 'customer_experience' ? domain.components : domain.components.slice(0, 5)).map((component) => (
+                          <div key={component.id}>
+                            <div className="flex justify-between text-[11px] mb-1">
+                              <span className="text-gray-400">{component.label}</span>
+                              <span className="text-gray-300 font-mono">{Math.round(component.score)}/100</span>
+                            </div>
+                            <div className="w-full bg-morpheus-900 h-1 rounded-full overflow-hidden">
+                              <div
+                                className={`${domain.barColor} h-full rounded-full`}
+                                style={{ width: `${Math.max(0, Math.min(100, component.score))}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
              </div>
 
              <div className="mt-8 pt-6 border-t border-morpheus-700">
@@ -561,14 +529,25 @@ const Customer360: React.FC = () => {
                     <History size={14} /> Recent Events
                  </h3>
                  <div className="space-y-4">
-                     {[1,2,3].map((i) => (
-                         <div key={i} className="flex gap-3 items-start">
-                             <div className="w-1.5 h-1.5 rounded-full bg-gray-600 mt-1.5"></div>
-                             <div>
-                                 <p className="text-xs text-gray-300">Ticket #4829 closed with positive feedback.</p>
-                                 <span className="text-[10px] text-gray-500">2 hours ago • Salesforce</span>
-                             </div>
+                     {recentActivity.length === 0 && (
+                       <div className="text-xs text-gray-500">No recent activity events available from connected sources.</div>
+                     )}
+                     {recentActivity.map((event, index) => (
+                       <div key={`${event.timestamp || 'event'}-${index}`} className="flex gap-3 items-start">
+                         <div className={`w-1.5 h-1.5 rounded-full mt-1.5 ${
+                           event.sentiment === 'positive'
+                             ? 'bg-emerald-500'
+                             : event.sentiment === 'negative'
+                               ? 'bg-red-500'
+                               : 'bg-gray-600'
+                         }`}></div>
+                         <div>
+                           <p className="text-xs text-gray-300">{event.subject || event.type || 'Activity event'}</p>
+                           <span className="text-[10px] text-gray-500">
+                             {event.timestamp || 'Unknown time'}{event.channel ? ` • ${event.channel}` : ''}
+                           </span>
                          </div>
+                       </div>
                      ))}
                  </div>
              </div>
@@ -576,7 +555,6 @@ const Customer360: React.FC = () => {
 
       </div>
     </div>
-    </>
   );
 };
 

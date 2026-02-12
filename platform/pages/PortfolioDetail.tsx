@@ -37,6 +37,7 @@ interface Account {
   name: string;
   mrr: number;
   health_score: number;
+  cns?: number;
   industry: string;
   churn_probability: number;
   product_count?: number;
@@ -171,15 +172,20 @@ const PortfolioDetail: React.FC = () => {
     </div>
   );
 
+  const getCnsScore = (account: Account): number => {
+    const raw = account.cns ?? account.health_score ?? 0;
+    return Math.max(0, Math.min(100, Number(raw) || 0));
+  };
+
   const role = getAuth()?.role;
 
   const totalMRR = accounts.reduce((sum, a) => sum + (a.mrr || 0), 0);
-  const avgHealth = accounts.length > 0 
-    ? accounts.reduce((sum, a) => sum + (a.health_score || 0), 0) / accounts.length 
+  const avgCns = accounts.length > 0 
+    ? accounts.reduce((sum, a) => sum + getCnsScore(a), 0) / accounts.length 
     : 0;
 
   // --- Portfolio 360 KPIs (computed client-side) ---
-  const atRiskAccounts = accounts.filter(a => (a.health_score || 0) < 70);
+  const atRiskAccounts = accounts.filter(a => getCnsScore(a) < 70);
   const atRiskMRR = atRiskAccounts.reduce((s, a) => s + (a.mrr || 0), 0);
   const atRiskPct = totalMRR > 0 ? Math.round((atRiskMRR / totalMRR) * 100) : 0;
 
@@ -221,7 +227,7 @@ const PortfolioDetail: React.FC = () => {
   ];
   const healthDistData = healthBuckets.map(b => ({
     bucket: b.bucket,
-    clients: accounts.filter(a => (a.health_score || 0) >= b.min && (a.health_score || 0) < b.max).length,
+    clients: accounts.filter(a => getCnsScore(a) >= b.min && getCnsScore(a) < b.max).length,
   }));
 
   const mrrBuckets = [
@@ -310,11 +316,11 @@ const PortfolioDetail: React.FC = () => {
             {(() => {
               const total = accounts.length;
               const totalMRRLocal = totalMRR;
-              const avg = Math.round(avgHealth);
+              const avg = Math.round(avgCns);
               const top5 = [...accounts].sort((a,b)=> (b.mrr||0)-(a.mrr||0)).slice(0,5);
               const top5Mrr = top5.reduce((s,a)=> s+(a.mrr||0), 0);
               const top5Pct = totalMRRLocal > 0 ? Math.round((top5Mrr/totalMRRLocal)*100) : 0;
-              const atRisk = accounts.filter(a => (a.health_score||0) < 70);
+              const atRisk = accounts.filter(a => getCnsScore(a) < 70);
               const atRiskMrr = atRisk.reduce((s,a)=> s+(a.mrr||0), 0);
               const stale = accounts.filter(a => {
                 if (!a.last_activity) return false;
@@ -327,7 +333,7 @@ const PortfolioDetail: React.FC = () => {
                 .map(a => {
                   const days = a.last_activity ? Math.round((Date.now() - new Date(a.last_activity).getTime())/86400000) : null;
                   const fail = a.health_factors?.failed_payments_10m || 0;
-                  const score = (a.health_score||0);
+                  const score = getCnsScore(a);
                   // simple priority heuristic
                   const p = (100-score) + (fail*10) + (days ? Math.min(40, days/2) : 0);
                   return { a, p, days, fail };
@@ -339,7 +345,7 @@ const PortfolioDetail: React.FC = () => {
                 <div className="space-y-2">
                   <div>
                     You’re managing <span className="font-mono text-gray-100">{total}</span> clients worth{' '}
-                    <span className="font-mono text-emerald-300">${Math.round(totalMRRLocal).toLocaleString()}</span> MRR. Average health is{' '}
+                    <span className="font-mono text-emerald-300">${Math.round(totalMRRLocal).toLocaleString()}</span> MRR. Average CNS is{' '}
                     <span className="font-mono text-gray-100">{avg}%</span>.
                   </div>
                   <div>
@@ -388,10 +394,10 @@ const PortfolioDetail: React.FC = () => {
           </div>
         </div>
         <div className="bg-morpheus-800 border border-morpheus-700 rounded-2xl p-6">
-          <p className="text-gray-500 text-sm font-medium mb-1 uppercase tracking-wider">Avg. Health Score</p>
+          <p className="text-gray-500 text-sm font-medium mb-1 uppercase tracking-wider">Avg. CNS Score</p>
           <div className="flex items-center gap-3">
-            <h2 className={`text-3xl font-bold ${avgHealth > 70 ? 'text-green-400' : 'text-orange-400'}`}>
-              {Math.round(avgHealth)}%
+            <h2 className={`text-3xl font-bold ${avgCns > 70 ? 'text-green-400' : 'text-orange-400'}`}>
+              {Math.round(avgCns)}%
             </h2>
           </div>
         </div>
@@ -407,7 +413,7 @@ const PortfolioDetail: React.FC = () => {
                 <h2 className="text-3xl font-bold text-white">{atRiskAccounts.length}</h2>
                 <AlertTriangle className="text-orange-400 opacity-70" size={22} />
               </div>
-              <div className="text-xs text-gray-400 mt-2">Health &lt; 70</div>
+              <div className="text-xs text-gray-400 mt-2">CNS &lt; 70</div>
             </div>
 
             <div className="bg-morpheus-800 border border-morpheus-700 rounded-2xl p-6">
@@ -473,7 +479,7 @@ const PortfolioDetail: React.FC = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
             <div className="bg-morpheus-800 border border-morpheus-700 rounded-2xl p-6">
-              <div className="text-sm font-semibold text-white mb-3">Health Score Distribution</div>
+              <div className="text-sm font-semibold text-white mb-3">CNS Score Distribution</div>
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={healthDistData}>
@@ -540,10 +546,10 @@ const PortfolioDetail: React.FC = () => {
           </div>
         </div>
         <div className="bg-morpheus-800 border border-morpheus-700 rounded-2xl p-6">
-          <p className="text-gray-500 text-sm font-medium mb-1 uppercase tracking-wider">Avg. Health Score</p>
+          <p className="text-gray-500 text-sm font-medium mb-1 uppercase tracking-wider">Avg. CNS Score</p>
           <div className="flex items-center gap-3">
-            <h2 className={`text-3xl font-bold ${avgHealth > 70 ? 'text-green-400' : 'text-orange-400'}`}>
-              {Math.round(avgHealth)}%
+            <h2 className={`text-3xl font-bold ${avgCns > 70 ? 'text-green-400' : 'text-orange-400'}`}>
+              {Math.round(avgCns)}%
             </h2>
           </div>
         </div>
@@ -567,13 +573,15 @@ const PortfolioDetail: React.FC = () => {
             <tr>
               <th className="px-6 py-4 font-semibold">Customer</th>
               <th className="px-6 py-4 font-semibold">MRR</th>
-              <th className="px-6 py-4 font-semibold">Health Score</th>
+              <th className="px-6 py-4 font-semibold">CNS Score</th>
               <th className="px-6 py-4 font-semibold">Risk Status</th>
               <th className="px-6 py-4 font-semibold text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-morpheus-700">
-            {accounts.map(account => (
+            {accounts.map(account => {
+              const cnsScore = getCnsScore(account);
+              return (
               <tr 
                 key={account.customer_id}
                 className="hover:bg-morpheus-700/30 transition-colors cursor-pointer"
@@ -595,18 +603,18 @@ const PortfolioDetail: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <div className="w-24 h-2 bg-morpheus-900 rounded-full overflow-hidden">
                       <div 
-                        className={`h-full rounded-full ${account.health_score > 70 ? 'bg-green-500' : account.health_score > 40 ? 'bg-orange-500' : 'bg-red-500'}`}
-                        style={{ width: `${account.health_score}%` }}
+                        className={`h-full rounded-full ${cnsScore > 70 ? 'bg-green-500' : cnsScore > 40 ? 'bg-orange-500' : 'bg-red-500'}`}
+                        style={{ width: `${cnsScore}%` }}
                       />
                     </div>
-                    <span className="text-sm font-bold text-white">{account.health_score}%</span>
+                    <span className="text-sm font-bold text-white">{Math.round(cnsScore)}%</span>
                   </div>
                 </td>
                 <td className="px-6 py-4">
                   <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                    account.health_score > 70 ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+                    cnsScore > 70 ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
                   }`}>
-                    {account.health_score > 70 ? 'Optimal' : 'At Risk'}
+                    {cnsScore > 70 ? 'Optimal' : 'At Risk'}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right">
@@ -626,7 +634,8 @@ const PortfolioDetail: React.FC = () => {
                   )}
                 </td>
               </tr>
-            ))}
+            );
+            })}
             {accounts.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-6 py-20 text-center text-gray-500">
@@ -733,7 +742,7 @@ const PortfolioDetail: React.FC = () => {
                           {' • '}MRR: ${a.mrr.toLocaleString()}
                           {' • '}Products: {a.product_count ?? '—'}
                           {' • '}Last: {a.last_activity ? new Date(a.last_activity).toLocaleDateString() : '—'}
-                          {' • '}Health: {a.health_score}%
+                          {' • '}CNS: {Math.round(getCnsScore(a))}%
                         </div>
                       </div>
                       <button 

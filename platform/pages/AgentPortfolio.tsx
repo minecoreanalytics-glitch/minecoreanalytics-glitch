@@ -9,6 +9,7 @@ interface CustomerSummary {
   mrr: number;
   lifetime_value: number;
   health_score: number;
+  cns?: number;
   churn_probability: number;
   industry: string;
   last_activity?: string;
@@ -50,14 +51,19 @@ const AgentPortfolio: React.FC = () => {
     }
   };
 
-  const getHealthColor = (score: number): string => {
+  const getCnsScore = (customer: CustomerSummary): number => {
+    const raw = customer.cns ?? customer.health_score ?? 0;
+    return Math.max(0, Math.min(100, Number(raw) || 0));
+  };
+
+  const getCnsColor = (score: number): string => {
     if (score >= 80) return 'text-green-500';
     if (score >= 60) return 'text-yellow-500';
     if (score >= 40) return 'text-orange-500';
     return 'text-red-500';
   };
 
-  const getHealthBadge = (score: number): { color: string; label: string } => {
+  const getCnsBadge = (score: number): { color: string; label: string } => {
     if (score >= 80) return { color: 'bg-green-500/20 text-green-400', label: 'Healthy' };
     if (score >= 60) return { color: 'bg-yellow-500/20 text-yellow-400', label: 'Monitor' };
     if (score >= 40) return { color: 'bg-orange-500/20 text-orange-400', label: 'At Risk' };
@@ -89,10 +95,10 @@ const AgentPortfolio: React.FC = () => {
     totalCustomers: customers.length,
     totalMRR: customers.reduce((sum, c) => sum + (c.mrr || 0), 0),
     avgHealth: customers.length > 0 
-      ? customers.reduce((sum, c) => sum + (c.health_score || 0), 0) / customers.length 
+      ? customers.reduce((sum, c) => sum + getCnsScore(c), 0) / customers.length 
       : 0,
-    atRisk: customers.filter(c => c.health_score < 60).length,
-    healthy: customers.filter(c => c.health_score >= 80).length,
+    atRisk: customers.filter(c => getCnsScore(c) < 60).length,
+    healthy: customers.filter(c => getCnsScore(c) >= 80).length,
   };
 
   // Filter and sort customers
@@ -100,15 +106,16 @@ const AgentPortfolio: React.FC = () => {
   
   if (filterStatus !== 'all') {
     filteredCustomers = filteredCustomers.filter(c => {
-      if (filterStatus === 'healthy') return c.health_score >= 80;
-      if (filterStatus === 'at-risk') return c.health_score >= 40 && c.health_score < 80;
-      if (filterStatus === 'critical') return c.health_score < 40;
+      const cnsScore = getCnsScore(c);
+      if (filterStatus === 'healthy') return cnsScore >= 80;
+      if (filterStatus === 'at-risk') return cnsScore >= 40 && cnsScore < 80;
+      if (filterStatus === 'critical') return cnsScore < 40;
       return true;
     });
   }
 
   filteredCustomers.sort((a, b) => {
-    if (sortBy === 'health') return (b.health_score || 0) - (a.health_score || 0);
+    if (sortBy === 'health') return getCnsScore(b) - getCnsScore(a);
     if (sortBy === 'mrr') return (b.mrr || 0) - (a.mrr || 0);
     if (sortBy === 'name') return a.name.localeCompare(b.name);
     return 0;
@@ -179,8 +186,8 @@ const AgentPortfolio: React.FC = () => {
             <p className="text-2xl font-bold text-emerald-400">{formatCurrency(customers.reduce((sum, c) => sum + (c.lifetime_value || 0), 0))}</p>
           </div>
           <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
-            <p className="text-slate-400 text-sm mb-1">Avg Health</p>
-            <p className={`text-2xl font-bold ${getHealthColor(portfolioStats.avgHealth)}`}>
+            <p className="text-slate-400 text-sm mb-1">Avg CNS</p>
+            <p className={`text-2xl font-bold ${getCnsColor(portfolioStats.avgHealth)}`}>
               {portfolioStats.avgHealth.toFixed(0)}%
             </p>
           </div>
@@ -236,7 +243,7 @@ const AgentPortfolio: React.FC = () => {
                 : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
             }`}
           >
-            Critical ({customers.filter(c => c.health_score < 40).length})
+            Critical ({customers.filter(c => getCnsScore(c) < 40).length})
           </button>
         </div>
 
@@ -247,7 +254,7 @@ const AgentPortfolio: React.FC = () => {
             onChange={(e) => setSortBy(e.target.value as any)}
             className="bg-slate-800 text-white border border-slate-700 rounded px-3 py-2"
           >
-            <option value="health">Health Score</option>
+            <option value="health">CNS Score</option>
             <option value="mrr">MRR (Highest)</option>
             <option value="name">Name (A-Z)</option>
           </select>
@@ -263,7 +270,7 @@ const AgentPortfolio: React.FC = () => {
               <th className="text-left px-6 py-3 text-slate-300 font-semibold">Industry</th>
               <th className="text-right px-6 py-3 text-slate-300 font-semibold">MRR</th>
               <th className="text-right px-6 py-3 text-slate-300 font-semibold">Lifetime</th>
-              <th className="text-center px-6 py-3 text-slate-300 font-semibold">Health Score</th>
+              <th className="text-center px-6 py-3 text-slate-300 font-semibold">CNS Score</th>
               <th className="text-center px-6 py-3 text-slate-300 font-semibold">Churn Risk</th>
               <th className="text-center px-6 py-3 text-slate-300 font-semibold">Status</th>
               <th className="text-center px-6 py-3 text-slate-300 font-semibold">Actions</th>
@@ -271,7 +278,8 @@ const AgentPortfolio: React.FC = () => {
           </thead>
           <tbody>
             {filteredCustomers.map((customer, index) => {
-              const healthBadge = getHealthBadge(customer.health_score);
+              const cnsScore = getCnsScore(customer);
+              const healthBadge = getCnsBadge(cnsScore);
               const riskBadge = getRiskBadge(customer.churn_probability);
               
               return (
@@ -302,16 +310,16 @@ const AgentPortfolio: React.FC = () => {
                       <div className="w-16 bg-slate-700 rounded-full h-2">
                         <div
                           className={`h-2 rounded-full ${
-                            customer.health_score >= 80 ? 'bg-green-500' :
-                            customer.health_score >= 60 ? 'bg-yellow-500' :
-                            customer.health_score >= 40 ? 'bg-orange-500' :
+                            cnsScore >= 80 ? 'bg-green-500' :
+                            cnsScore >= 60 ? 'bg-yellow-500' :
+                            cnsScore >= 40 ? 'bg-orange-500' :
                             'bg-red-500'
                           }`}
-                          style={{ width: `${customer.health_score}%` }}
+                          style={{ width: `${cnsScore}%` }}
                         />
                       </div>
-                      <span className={`font-bold ${getHealthColor(customer.health_score)}`}>
-                        {customer.health_score}
+                      <span className={`font-bold ${getCnsColor(cnsScore)}`}>
+                        {Math.round(cnsScore)}
                       </span>
                     </div>
                   </td>
